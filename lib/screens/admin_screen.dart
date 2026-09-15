@@ -133,65 +133,57 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   // -------------------------------------------------------------------------
 
   Future<void> _login() async {
-    if (!(_authFormKey.currentState?.validate() ?? false)) return;
+  if (!(_authFormKey.currentState?.validate() ?? false)) return;
 
-    setState(() {
-      _authLoading = true;
-      _authError = null;
-    });
+  setState(() {
+    _authLoading = true;
+    _authError = null;
+  });
 
-    final email = _AdminSecurity.sanitize(_emailController.text, maxLength: 120);
-    final password = _passwordController.text;
+  try {
+    // 1. Authentification auprès de Supabase Auth
+    final response = await Supabase.instance.client.auth.signInWithPassword(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+    );
 
-    try {
-      await Future<void>.delayed(const Duration(milliseconds: 900));
+    final user = response.user;
+    if (user == null) throw Exception('Utilisateur introuvable');
 
-      final ok = email.isNotEmpty && password.length >= 8;
+    // 2. Vérification du rôle en BDD
+    final profile = await Supabase.instance.client
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
 
-      if (!mounted) return;
+    final isAdmin = profile['role'] == 'admin';
 
-      if (ok) {
-        setState(() {
-          _authenticated = true;
-        });
-        _startSession();
-        _track('Connexion réussie');
-        _loadContent();
-      } else {
-        setState(() {
-          _authLoading = false;
-          _authError = 'Identifiants invalides ou mot de passe trop court.';
-        });
-      }
-    } catch (_) {
-      if (!mounted) return;
+    if (!mounted) return;
+
+    if (isAdmin) {
+      setState(() => _authenticated = true);
+      _startSession();
+      _track('Connexion admin réussie');
+      _loadContent();
+    } else {
+      // Déconnexion si l'utilisateur n'est pas admin en BDD
+      await Supabase.instance.client.auth.signOut();
       setState(() {
         _authLoading = false;
-        _authError = 'Erreur de connexion. Réessayez.';
+        _authError = 'Accès refusé : Ce compte n\'a pas les privilèges administrateur.';
       });
-    } finally {
-      _passwordController.clear();
     }
-  }
-
-  void _logout({String? reason}) {
+  } catch (e) {
+    if (!mounted) return;
     setState(() {
-      _authenticated = false;
-      _tab = _AdminTab.dashboard;
-      _authError = null;
-      _emailController.clear();
-      _passwordController.clear();
+      _authLoading = false;
+      _authError = 'Identifiants invalides ou erreur d\'accès.';
     });
-    _sessionTimer?.cancel();
-
-    if (reason != null && mounted) {
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(content: Text(reason)),
-        );
-    }
+  } finally {
+    _passwordController.clear();
   }
+}
 
   // -------------------------------------------------------------------------
   // CONTENT

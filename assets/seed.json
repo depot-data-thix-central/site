@@ -24,8 +24,12 @@
     "badge_title": "THIX ID",
     "badge_text": "L'IDENTITÉ NUMÉRIQUE\nSÉCURISÉE POUR TOUS",
     "card": {
-      "brand": "THIX ID", "nom_label": "NOM", "name": "LUMINA Nathan",
-      "id_label": "ID : THIX-CO-0428-MSN/6", "status": "Validé", "nfc": "NFC"
+      "brand": "THIX ID",
+      "nom_label": "NOM",
+      "name": "LUMINA Nathan",
+      "id_label": "ID : THIX-CO-0428-MSN/6",
+      "status": "Validé",
+      "nfc": "NFC"
     }
   },
   "features": [
@@ -40,12 +44,27 @@
     "cta": "Découvrir toutes nos solutions",
     "link_label": "En savoir plus",
     "main": [
-      {"icon": "fingerprint", "title": "THIX ID", "subtitle": "Identité numérique sécurisée",
-       "text": "Une plateforme d'identité digitale pour tous : citoyens, étudiants, professionnels et entreprises.", "featured": true},
-      {"icon": "ai", "title": "THIX IA", "subtitle": "Assistant IA pour les projets",
-       "text": "Des outils d'intelligence artificielle pour les entreprises, la recherche, l'éducation et l'innovation.", "featured": false},
-      {"icon": "school", "title": "THIX ED", "subtitle": "Éducation numérique",
-       "text": "Des solutions pour une éducation accessible, connectée et orientée vers l'avenir.", "featured": false}
+      {
+        "icon": "fingerprint",
+        "title": "THIX ID",
+        "subtitle": "Identité numérique sécurisée",
+        "text": "Une plateforme d'identité digitale pour tous : citoyens, étudiants, professionnels et entreprises.",
+        "featured": true
+      },
+      {
+        "icon": "ai",
+        "title": "THIX IA",
+        "subtitle": "Assistant IA pour les projets",
+        "text": "Des outils d'intelligence artificielle pour les entreprises, la recherche, l'éducation et l'innovation.",
+        "featured": false
+      },
+      {
+        "icon": "school",
+        "title": "THIX ED",
+        "subtitle": "Éducation numérique",
+        "text": "Des solutions pour une éducation accessible, connectée et orientée vers l'avenir.",
+        "featured": false
+      }
     ],
     "minis": [
       {"icon": "wifi", "title": "THIX CONNECT", "subtitle": "Internet & connectivité"},
@@ -99,6 +118,6 @@
     ]
   },
   "consent": {
-    "text": "Nous n'utilisons aucun cookie publicitaire ni traceur tiers. Un stockage local strictement nécessaire peut être utilisé pour mémoriser vos préférences. Votre choix est modifiable à tout moment."
+    "text": "Nous n'utilisons aucun cookie publicitaire ni traceur tiers. Un stockage local strictly nécessaire peut être utilisé pour mémoriser vos préférences. Votre choix est modifiable à tout moment."
   }
 }

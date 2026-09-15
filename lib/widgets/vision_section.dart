@@ -1,5 +1,4 @@
-
-import '../theme.dart';
+import 'package:flutter/material.dart';
 
 class VisionSection extends StatelessWidget {
   const VisionSection({super.key, required this.text});
@@ -13,7 +12,10 @@ class VisionSection extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
       child: Text(
         text,
-        style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 22),
+        style: Theme.of(context)
+            .textTheme
+            .displayMedium
+            ?.copyWith(fontSize: 22),
       ),
     );
   }

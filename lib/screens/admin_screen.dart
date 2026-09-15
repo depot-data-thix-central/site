@@ -139,18 +139,17 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   @override
-void dispose() {
-  _emailCtrl.dispose();
-  _passwordCtrl.dispose();
-  for (final c in _text.values) {
-    c.dispose();
+  void dispose() {
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    for (final c in _text.values) {
+      c.dispose();
+    }
+    for (final c in _images.values) {
+      c.dispose();
+    }
+    super.dispose();
   }
-  for (final c in _images.values) {
-    c.dispose();
-  }
-  super.dispose();
-}
-
 
   // ── Auth ─────────────────────────────────────────────────────
   Future<void> _checkExistingSession() async {
@@ -242,6 +241,7 @@ void dispose() {
       final xfile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
       if (xfile == null) return null;
 
+      // Utilisation des bytes pour compatibilité parfaite avec le Web
       final bytes = await xfile.readAsBytes();
       final ext = xfile.name.split('.').last.toLowerCase();
       final validExt = ['png', 'jpg', 'jpeg', 'webp', 'gif'].contains(ext) ? ext : 'png';
@@ -249,6 +249,7 @@ void dispose() {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.$validExt';
       final path = '$folder/$fileName';
 
+      // uploadBinary est obligatoire sur Web
       await Supabase.instance.client.storage.from('images').uploadBinary(
         path,
         bytes,
@@ -289,7 +290,8 @@ void dispose() {
       _text['ctaSecondary']?.text = content.ctaSecondary;
       _images['heroImageUrl']?.text = content.heroImageUrl ?? '';
       
-      // Assurez-vous d'ajouter ces propriétés à votre classe SiteContent
+      // Les lignes ci-dessous sont commentées pour éviter les erreurs 
+      // si votre modèle SiteContent n'a pas encore ces propriétés.
       // _text['managerName']?.text = content.managerName ?? '';
       // _text['managerMessage']?.text = content.managerMessage ?? '';
       // _images['managerPhotoUrl']?.text = content.managerPhotoUrl ?? '';
@@ -340,7 +342,6 @@ void dispose() {
         ctaSecondary: _text['ctaSecondary']?.text ?? '',
         heroImageUrl: _httpsOrNull(_images['heroImageUrl']?.text),
         
-        // Assurez-vous d'avoir ces paramètres dans le constructeur de SiteContent
         // managerName: _text['managerName']?.text ?? '',
         // managerMessage: _text['managerMessage']?.text ?? '',
         // managerPhotoUrl: _httpsOrNull(_images['managerPhotoUrl']?.text),
@@ -1175,7 +1176,7 @@ void dispose() {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Image.network(
-                url,
+                url, // url est ici garanti d'être une String valide
                 height: 140,
                 width: double.infinity,
                 fit: BoxFit.cover,
@@ -1194,7 +1195,9 @@ void dispose() {
 
   // Uploader pour les collections (Features et Solutions)
   Widget _collectionImageUploadField(String label, String? currentUrl, ValueChanged<String> onChanged, String uploadKey, String folder) {
-    final ok = currentUrl != null && currentUrl.startsWith('https://');
+    // On extrait l'URL en variable non-nullable locale pour éviter l'utilisation de "!"
+    final url = currentUrl?.trim() ?? '';
+    final ok = url.startsWith('https://');
     final isUploading = _uploading.contains(uploadKey);
 
     return Padding(
@@ -1208,8 +1211,8 @@ void dispose() {
             children: [
               Expanded(
                 child: TextFormField(
-                  key: ValueKey(currentUrl),
-                  initialValue: currentUrl,
+                  key: ValueKey(url),
+                  initialValue: url,
                   style: const TextStyle(color: _A.ink, fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'https://...',
@@ -1247,7 +1250,7 @@ void dispose() {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Image.network(
-                currentUrl, // <-- Suppression du '!' ici
+                url, // Grâce à la variable non-nullable locale 'url', pas besoin de '!'
                 height: 100,
                 width: 100,
                 fit: BoxFit.cover,
@@ -1259,7 +1262,6 @@ void dispose() {
       ),
     );
   }
-
 
   Widget _inlineField(String label, String value, ValueChanged<String> onChanged, {int maxLines = 1}) {
     return Padding(

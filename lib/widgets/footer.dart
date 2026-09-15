@@ -243,10 +243,10 @@ class _FooterTopButtonState extends State<_FooterTopButton> {
                     ),
                   ],
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.arrow_upward_rounded,
                   size: 20,
-                  color: const Color(0xFF111827),
+                  color: Color(0xFF111827),
                 ),
               ),
             ),

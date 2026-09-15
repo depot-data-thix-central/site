@@ -92,9 +92,9 @@ class _SolutionsSectionState extends State<SolutionsSection>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Nos solutions',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.w800,
             color: Color(0xFF111827),

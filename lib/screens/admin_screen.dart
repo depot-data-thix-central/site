@@ -1,6 +1,4 @@
 import 'dart:async';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -649,6 +647,24 @@ class _AdminScreenState extends State<AdminScreen> {
     if (_loading && _tab != _AdminTab.dashboard) {
       return const Center(child: CircularProgressIndicator(color: _A.ink));
     }
+    if (_error != null && _tab != _AdminTab.dashboard) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline_rounded, color: _A.danger, size: 48),
+            const SizedBox(height: 12),
+            Text('Erreur de chargement : $_error', style: const TextStyle(color: _A.danger)),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _loadContent,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Réessayer'),
+            ),
+          ],
+        ),
+      );
+    }
     switch (_tab) {
       case _AdminTab.dashboard:
         return _dashboard();
@@ -860,7 +876,7 @@ class _AdminScreenState extends State<AdminScreen> {
           const Text('Phare', style: TextStyle(fontSize: 12, color: _A.muted)),
           Switch(
             value: item.featured,
-            activeColor: _A.ink,
+            activeThumbColor: _A.ink,
             onChanged: (v) => setState(() {
               item.featured = v;
               _markDirty();

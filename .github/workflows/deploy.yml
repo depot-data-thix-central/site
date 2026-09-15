@@ -22,11 +22,8 @@ jobs:
       - uses: subosito/flutter-action@v2
         with: { channel: stable, cache: true }
       - run: flutter pub get
-        working-directory: site
       - run: flutter analyze
-        working-directory: site
       - run: flutter test
-        working-directory: site
 
   deploy:
     if: github.event_name == 'push'
@@ -40,13 +37,10 @@ jobs:
       - uses: subosito/flutter-action@v2
         with: { channel: stable, cache: true }
       - run: flutter pub get
-        working-directory: site
       - run: flutter build web --release --no-web-resources-cdn --base-href /site/
-        working-directory: site
-      - run: cp site/build/web/index.html site/build/web/404.html
+      - run: cp build/web/index.html build/web/404.html   # support de /admin sur Pages
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site/build/web
+        with: { path: build/web }
       - id: deployment
         uses: actions/deploy-pages@v4

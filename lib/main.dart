@@ -12,35 +12,35 @@ import 'admin.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // URLs propres
+  // URLs propres : / et /admin (au lieu de /#/ et /#/admin)
   if (kIsWeb) {
     usePathUrlStrategy();
   }
 
-  // On retire le loading le plus tôt possible
+  // Fonction pour retirer l'écran de chargement HTML
   void removeLoading() {
     try {
       web.document.getElementById('loading')?.remove();
     } catch (_) {}
   }
 
-  // Initialisation Supabase avec protection
+  // Initialisation Supabase (clé publique)
   try {
     await Supabase.initialize(
       url: Env.supabaseUrl,
-      anonKey: Env.supabaseAnonKey,
+      publishableKey: Env.supabaseAnonKey, // ← nouveau nom (remplace anonKey)
     );
   } catch (e, st) {
     debugPrint('Erreur Supabase.initialize: $e\n$st');
-    // On continue quand même pour afficher le site (même sans contenu)
+    // On continue quand même pour afficher le site
   }
 
   runApp(const SonathixApp());
 
-  // Sécurité supplémentaire : on enlève le loading après le premier frame
+  // Retire le loading après le premier rendu
   WidgetsBinding.instance.addPostFrameCallback((_) => removeLoading());
 
-  // Et aussi après un petit délai au cas où
+  // Sécurité supplémentaire (au cas où)
   Future.delayed(const Duration(milliseconds: 800), removeLoading);
 }
 

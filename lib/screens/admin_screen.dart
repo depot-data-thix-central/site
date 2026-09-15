@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/content.dart';
 import '../services/content_service.dart';
@@ -46,7 +47,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   final ContentService _contentService = ContentService();
 
   // Auth
-  final _emailController = TextEditingController();
+  final _emailController = TextEditingController(text: 'contact@thixid.com');
   final _passwordController = TextEditingController();
   final _authFormKey = GlobalKey<FormState>();
   bool _authenticated = false;
@@ -129,61 +130,80 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   }
 
   // -------------------------------------------------------------------------
-  // AUTH
+  // AUTH & LOGOUT
   // -------------------------------------------------------------------------
 
   Future<void> _login() async {
-  if (!(_authFormKey.currentState?.validate() ?? false)) return;
+    if (!(_authFormKey.currentState?.validate() ?? false)) return;
 
-  setState(() {
-    _authLoading = true;
-    _authError = null;
-  });
+    setState(() {
+      _authLoading = true;
+      _authError = null;
+    });
 
-  try {
-    // 1. Authentification auprès de Supabase Auth
-    final response = await Supabase.instance.client.auth.signInWithPassword(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-    );
+    try {
+      final response = await Supabase.instance.client.auth.signInWithPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
-    final user = response.user;
-    if (user == null) throw Exception('Utilisateur introuvable');
+      final user = response.user;
+      if (user == null) throw Exception('Utilisateur introuvable');
 
-    // 2. Vérification du rôle en BDD
-    final profile = await Supabase.instance.client
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
+      final profile = await Supabase.instance.client
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
 
-    final isAdmin = profile['role'] == 'admin';
+      final isAdmin = profile['role'] == 'admin';
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (isAdmin) {
-      setState(() => _authenticated = true);
-      _startSession();
-      _track('Connexion admin réussie');
-      _loadContent();
-    } else {
-      // Déconnexion si l'utilisateur n'est pas admin en BDD
-      await Supabase.instance.client.auth.signOut();
+      if (isAdmin) {
+        setState(() => _authenticated = true);
+        _startSession();
+        _track('Connexion admin réussie');
+        _loadContent();
+      } else {
+        await Supabase.instance.client.auth.signOut();
+        setState(() {
+          _authLoading = false;
+          _authError = 'Accès refusé : privilèges administrateur requis.';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
         _authLoading = false;
-        _authError = 'Accès refusé : Ce compte n\'a pas les privilèges administrateur.';
+        _authError = 'Identifiants invalides ou erreur d\'accès.';
       });
+    } finally {
+      _passwordController.clear();
     }
-  } catch (e) {
-    if (!mounted) return;
-    setState(() {
-      _authLoading = false;
-      _authError = 'Identifiants invalides ou erreur d\'accès.';
-    });
-  } finally {
-    _passwordController.clear();
   }
-}
+
+  void _logout({String? reason}) async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+    } catch (_) {}
+
+    setState(() {
+      _authenticated = false;
+      _tab = _AdminTab.dashboard;
+      _authError = null;
+      _passwordController.clear();
+    });
+    _sessionTimer?.cancel();
+
+    if (reason != null && mounted) {
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(content: Text(reason)),
+        );
+    }
+  }
 
   // -------------------------------------------------------------------------
   // CONTENT

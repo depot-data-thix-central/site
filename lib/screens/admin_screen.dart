@@ -289,15 +289,44 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.white,
-        systemNavigationBarColor: Colors.white,
-        statusBarIconBrightness: Brightness.dark,
+    return Theme(
+      data: ThemeData.light().copyWith(
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+        primaryColor: const Color(0xFFB8860B),
+        colorScheme: const ColorScheme.light(
+          primary: Color(0xFFB8860B),
+          surface: Colors.white,
+          onSurface: Color(0xFF111827),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white,
+          labelStyle: const TextStyle(color: Color(0xFF4B5563), fontSize: 14),
+          floatingLabelStyle: const TextStyle(color: Color(0xFFB8860B), fontWeight: FontWeight.w600),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFB8860B), width: 2),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFB91C1C)),
+          ),
+        ),
       ),
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        body: _authenticated ? _buildShell() : _buildLogin(),
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.dark.copyWith(
+          statusBarColor: Colors.white,
+          systemNavigationBarColor: Colors.white,
+          statusBarIconBrightness: Brightness.dark,
+        ),
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF8FAFC),
+          body: _authenticated ? _buildShell() : _buildLogin(),
+        ),
       ),
     );
   }
@@ -310,102 +339,121 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
-          child: Form(
-            key: _authFormKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Icon(Icons.lock_rounded, size: 44, color: Color(0xFFB8860B)),
-                const SizedBox(height: 16),
-                const Text(
-                  'Espace administrateur',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF111827),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Connectez-vous pour gérer le contenu du site.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
-                ),
-                const SizedBox(height: 28),
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  autofillHints: const [AutofillHints.email],
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.mail_outline_rounded),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) {
-                    final value = v?.trim() ?? '';
-                    if (value.isEmpty) return 'Email requis';
-                    if (!value.contains('@')) return 'Email invalide';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  autofillHints: const [AutofillHints.password],
-                  decoration: InputDecoration(
-                    labelText: 'Mot de passe',
-                    prefixIcon: const Icon(Icons.lock_outline_rounded),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                      ),
-                      onPressed: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
-                    ),
-                    border: const OutlineInputBorder(),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Mot de passe requis';
-                    if (v.length < 8) return '8 caractères minimum';
-                    return null;
-                  },
-                ),
-                if (_authError != null) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    _authError!,
-                    style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 13),
-                  ),
-                ],
-                const SizedBox(height: 24),
-                FilledButton.icon(
-                  onPressed: _authLoading ? null : _login,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFB8860B),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: _authLoading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.login_rounded),
-                  label: Text(_authLoading ? 'Connexion…' : 'Se connecter'),
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color.fromRGBO(15, 23, 42, 0.08),
+                  blurRadius: 24,
+                  offset: Offset(0, 8),
                 ),
               ],
+            ),
+            child: Form(
+              key: _authFormKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Icon(Icons.lock_rounded, size: 44, color: Color(0xFFB8860B)),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Espace administrateur',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Connectez-vous pour gérer le contenu du site.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+                  ),
+                  const SizedBox(height: 28),
+                  TextFormField(
+                    controller: _emailController,
+                    style: const TextStyle(color: Color(0xFF111827)),
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email],
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      prefixIcon: Icon(Icons.mail_outline_rounded, color: Color(0xFF6B7280)),
+                    ),
+                    validator: (v) {
+                      final value = v?.trim() ?? '';
+                      if (value.isEmpty) return 'Email requis';
+                      if (!value.contains('@')) return 'Email invalide';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _passwordController,
+                    style: const TextStyle(color: Color(0xFF111827)),
+                    obscureText: _obscurePassword,
+                    autofillHints: const [AutofillHints.password],
+                    decoration: InputDecoration(
+                      labelText: 'Mot de passe',
+                      prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF6B7280)),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          color: const Color(0xFF6B7280),
+                        ),
+                        onPressed: () =>
+                            setState(() => _obscurePassword = !_obscurePassword),
+                      ),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Mot de passe requis';
+                      if (v.length < 8) return '8 caractères minimum';
+                      return null;
+                    },
+                  ),
+                  if (_authError != null) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      _authError!,
+                      style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    onPressed: _authLoading ? null : _login,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFB8860B),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: _authLoading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.login_rounded),
+                    label: Text(
+                      _authLoading ? 'Connexion…' : 'Se connecter',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -425,15 +473,18 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
           child: Column(
             children: [
               _topbar(isWide: isWide),
-              const Divider(height: 1),
+              const Divider(height: 1, color: Color(0xFFE5E7EB)),
               Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  child: KeyedSubtree(
-                    key: ValueKey(_tab),
-                    child: _buildBody(),
+                child: Container(
+                  color: const Color(0xFFF8FAFC),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    child: KeyedSubtree(
+                      key: ValueKey(_tab),
+                      child: _buildBody(),
+                    ),
                   ),
                 ),
               ),
@@ -447,7 +498,10 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   Widget _sidebar() {
     return Container(
       width: 240,
-      color: Colors.white,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(right: BorderSide(color: Color(0xFFE5E7EB))),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -456,20 +510,20 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.admin_panel_settings_rounded,
-                  color: Color(0xFFB8860B)),
-              SizedBox(width: 8),
+                  color: Color(0xFFB8860B), size: 28),
+              SizedBox(width: 10),
               Text(
                 'Admin',
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
-                  fontSize: 18,
+                  fontSize: 20,
                   color: Color(0xFF111827),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 24),
-          const Divider(height: 1),
+          const Divider(height: 1, color: Color(0xFFE5E7EB)),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(12),
@@ -478,7 +532,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
               ],
             ),
           ),
-          const Divider(height: 1),
+          const Divider(height: 1, color: Color(0xFFE5E7EB)),
           Padding(
             padding: const EdgeInsets.all(12),
             child: TextButton.icon(
@@ -487,6 +541,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
               label: const Text('Déconnexion'),
               style: TextButton.styleFrom(
                 foregroundColor: const Color(0xFFB91C1C),
+                alignment: Alignment.centerLeft,
               ),
             ),
           ),
@@ -508,7 +563,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
             tab.label,
             style: TextStyle(
               fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              color: selected ? const Color(0xFF111827) : const Color(0xFF374151),
+              color: selected ? const Color(0xFF111827) : const Color(0xFF4B5563),
             ),
           ),
           onTap: () {
@@ -524,19 +579,19 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   Widget _topbar({required bool isWide}) {
     return Container(
       height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       color: Colors.white,
       child: Row(
         children: [
           if (!isWide)
             IconButton(
-              icon: const Icon(Icons.menu_rounded),
+              icon: const Icon(Icons.menu_rounded, color: Color(0xFF111827)),
               onPressed: () => _openDrawer(),
             ),
           Text(
             _tab.label,
             style: const TextStyle(
-              fontSize: 18,
+              fontSize: 20,
               fontWeight: FontWeight.w800,
               color: Color(0xFF111827),
             ),
@@ -547,6 +602,10 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
               onPressed: _publishState == _PublishState.publishing
                   ? null
                   : () => _save(publish: false),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF374151),
+                side: const BorderSide(color: Color(0xFFD1D5DB)),
+              ),
               icon: const Icon(Icons.save_outlined, size: 18),
               label: const Text('Brouillon'),
             ),
@@ -588,18 +647,18 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
             children: [
               for (final tab in _AdminTab.values)
                 ListTile(
-                  leading: Icon(tab.icon),
-                  title: Text(tab.label),
+                  leading: Icon(tab.icon, color: const Color(0xFFB8860B)),
+                  title: Text(tab.label, style: const TextStyle(color: Color(0xFF111827), fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.of(context).pop();
                     setState(() => _tab = tab);
                   },
                 ),
-              const Divider(height: 1),
+              const Divider(height: 1, color: Color(0xFFE5E7EB)),
               ListTile(
                 leading: const Icon(Icons.logout_rounded, color: Color(0xFFB91C1C)),
                 title: const Text('Déconnexion',
-                    style: TextStyle(color: Color(0xFFB91C1C))),
+                    style: TextStyle(color: Color(0xFFB91C1C), fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.of(context).pop();
                   _logout();
@@ -631,7 +690,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
 
   Widget _dashboard() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator(color: Color(0xFFB8860B)));
     }
 
     final c = _content ?? const SiteContent();
@@ -641,7 +700,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       children: [
         const Text(
           'Vue d’ensemble',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF111827)),
         ),
         const SizedBox(height: 16),
         Wrap(
@@ -667,11 +726,19 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
             children: [
               FilledButton.tonalIcon(
                 onPressed: () => setState(() => _tab = _AdminTab.content),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFB8860B).withValues(alpha: 0.15),
+                  foregroundColor: const Color(0xFFB8860B),
+                ),
                 icon: const Icon(Icons.edit_note_rounded),
-                label: const Text('Éditer le contenu'),
+                label: const Text('Éditer le contenu', style: TextStyle(fontWeight: FontWeight.w700)),
               ),
               OutlinedButton.icon(
                 onPressed: _loadContent,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF374151),
+                  side: const BorderSide(color: Color(0xFFD1D5DB)),
+                ),
                 icon: const Icon(Icons.refresh_rounded),
                 label: const Text('Recharger'),
               ),
@@ -684,17 +751,18 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
 
   Widget _contentEditor() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator(color: Color(0xFFB8860B)));
     }
     if (_error != null) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Erreur de chargement du contenu.'),
+            const Text('Erreur de chargement du contenu.', style: TextStyle(color: Color(0xFF111827))),
             const SizedBox(height: 12),
             FilledButton(
               onPressed: _loadContent,
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB8860B)),
               child: const Text('Réessayer'),
             ),
           ],
@@ -705,15 +773,14 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        const Text('Hero', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 12),
+        _sectionTitle('Hero'),
         _field('heroTitle', label: 'Titre'),
         _field('heroHighlight', label: 'Partie mise en avant (or)'),
         _field('heroParagraph', label: 'Paragraphe', maxLines: 4),
         const SizedBox(height: 24),
-        const Text('Call-to-action', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 12),
+        _sectionTitle('Call-to-action'),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(child: _field('ctaPrimary', label: 'CTA principal')),
             const SizedBox(width: 12),
@@ -721,19 +788,31 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
           ],
         ),
         const SizedBox(height: 24),
-        const Text('Impact & Vision', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 12),
+        _sectionTitle('Impact & Vision'),
         _field('impactQuote', label: 'Citation d’impact', maxLines: 3),
         const SizedBox(height: 12),
         _field('visionText', label: 'Texte vision', maxLines: 4),
         const SizedBox(height: 24),
-        const Text('Légal & Consentement', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 12),
+        _sectionTitle('Légal & Consentement'),
         _field('footerLegal', label: 'Mentions légales (footer)', maxLines: 4),
         const SizedBox(height: 12),
         _field('consentText', label: 'Texte de consentement', maxLines: 3),
         const SizedBox(height: 40),
       ],
+    );
+  }
+
+  Widget _sectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          color: Color(0xFF111827),
+        ),
+      ),
     );
   }
 
@@ -745,11 +824,11 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       children: [
         const Text(
           'Collections',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF111827)),
         ),
         const SizedBox(height: 8),
         const Text(
-          'Gérez ici les listes (features, solutions, stats). À connecter à ton backend.',
+          'Gérez ici les listes (features, solutions, stats). À connecter à votre backend.',
           style: TextStyle(color: Color(0xFF6B7280)),
         ),
         const SizedBox(height: 16),
@@ -762,19 +841,21 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
 
   Widget _activityLog() {
     if (_activity.isEmpty) {
-      return const Center(child: Text('Aucune activité pour le moment.'));
+      return const Center(
+        child: Text('Aucune activité pour le moment.', style: TextStyle(color: Color(0xFF6B7280))),
+      );
     }
 
     return ListView.separated(
       padding: const EdgeInsets.all(24),
       itemCount: _activity.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
+      separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFE5E7EB)),
       itemBuilder: (context, index) {
         final entry = _activity[index];
         return ListTile(
           leading: const Icon(Icons.history_rounded, color: Color(0xFFB8860B)),
-          title: Text(entry.label),
-          subtitle: Text(_formatDate(entry.at)),
+          title: Text(entry.label, style: const TextStyle(color: Color(0xFF111827), fontWeight: FontWeight.w600)),
+          subtitle: Text(_formatDate(entry.at), style: const TextStyle(color: Color(0xFF6B7280))),
         );
       },
     );
@@ -784,7 +865,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        const Text('Paramètres', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+        const Text('Paramètres', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF111827))),
         const SizedBox(height: 16),
         _card(
           title: 'Sécurité',
@@ -826,9 +907,13 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       child: TextField(
         controller: _editors[key],
         maxLines: maxLines,
+        style: const TextStyle(
+          color: Color(0xFF111827),
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+        ),
         decoration: InputDecoration(
           labelText: label,
-          border: const OutlineInputBorder(),
         ),
         onChanged: (_) {
           if (_publishState == _PublishState.published) {
@@ -858,9 +943,9 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
           const SizedBox(height: 10),
           Text(
             '$value',
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF111827)),
           ),
-          Text(label, style: const TextStyle(color: Color(0xFF6B7280))),
+          Text(label, style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w500)),
         ],
       ),
     );
@@ -869,17 +954,23 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   Widget _card({required String title, required Widget child}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: const [
+          BoxShadow(color: Color.fromRGBO(15, 23, 42, 0.03), blurRadius: 10),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF111827)),
+          ),
+          const SizedBox(height: 14),
           child,
         ],
       ),
@@ -896,7 +987,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
               children: [
                 for (final item in items)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Row(
                       children: [
                         const Icon(Icons.circle, size: 6, color: Color(0xFFB8860B)),
@@ -904,6 +995,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                         Expanded(
                           child: Text(
                             _AdminSecurity.sanitize(item, maxLength: 120),
+                            style: const TextStyle(color: Color(0xFF111827), fontWeight: FontWeight.w500),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -917,7 +1009,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
 
   Widget _settingRow(IconData icon, String title, String subtitle) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -927,7 +1019,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF111827))),
                 Text(subtitle,
                     style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
               ],
@@ -948,12 +1040,13 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Se déconnecter ?'),
-        content: const Text('Vous devrez vous reconnecter pour accéder à l’admin.'),
+        backgroundColor: Colors.white,
+        title: const Text('Se déconnecter ?', style: TextStyle(color: Color(0xFF111827), fontWeight: FontWeight.w800)),
+        content: const Text('Vous devrez vous reconnecter pour accéder à l’admin.', style: TextStyle(color: Color(0xFF4B5563))),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
+            child: const Text('Annuler', style: TextStyle(color: Color(0xFF6B7280))),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB91C1C)),

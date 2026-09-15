@@ -7,10 +7,22 @@ import 'package:flutter/services.dart';
 import '../models/content.dart';
 import '../services/content_service.dart';
 
-/// ═══════════════════════════════════════════════════════════════
-/// HOMEPAGE COMPLÈTE — tout centralisé, zéro hardcode métier
-/// Fond blanc · contenu 100 % SiteContent · production-ready
-/// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// Palette harmonisée (Blanc & Slate - zéro or)
+// ═══════════════════════════════════════════════════════════════
+class _H {
+  static const bg = Colors.white;
+  static const ink = Color(0xFF0F172A);
+  static const muted = Color(0xFF64748B);
+  static const surface = Color(0xFFF8FAFC);
+  static const border = Color(0xFFE2E8F0);
+  static const subtext = Color(0xFF94A3B8);
+  static const lightBorder = Color(0xFFCBD5E1);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HOMEPAGE COMPLÈTE — tout centralisé, zéro hardcode métier
+// ═══════════════════════════════════════════════════════════════
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -37,14 +49,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   static const _sectionCount = 9;
   static const _timeout = Duration(seconds: 12);
   static const _maxAttempts = 3;
-
-  // Palette blanche / sombre (pas d'or)
-  static const _bg = Colors.white;
-  static const _ink = Color(0xFF0F172A);
-  static const _muted = Color(0xFF64748B);
-  static const _surface = Color(0xFFF8FAFC);
-  static const _border = Color(0xFFE2E8F0);
-  static const _accent = Color(0xFF0F172A);
 
   @override
   void initState() {
@@ -92,7 +96,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // ── Chargement sécurisé ──────────────────────────────────────
   Future<void> _load({bool refresh = false}) async {
     if (!mounted) return;
-    if (!refresh) setState(() { _loading = true; _error = null; });
+    if (!refresh) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
 
     try {
       final c = await _fetchWithRetry();
@@ -127,7 +136,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       if (refresh && _content != null) {
         _snack('Impossible de rafraîchir. Réessayez.', () => _load(refresh: true));
       } else {
-        setState(() { _loading = false; _error = e; });
+        setState(() {
+          _loading = false;
+          _error = e;
+        });
       }
     }
   }
@@ -171,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ..clearSnackBars()
       ..showSnackBar(SnackBar(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: _ink,
+        backgroundColor: _H.ink,
         content: Text(msg, style: const TextStyle(color: Colors.white)),
         action: SnackBarAction(label: 'Réessayer', textColor: Colors.white, onPressed: retry),
       ));
@@ -196,12 +208,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: _bg,
-        systemNavigationBarColor: _bg,
+        statusBarColor: _H.bg,
+        systemNavigationBarColor: _H.bg,
         statusBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: _bg,
+        backgroundColor: _H.bg,
         body: _body(),
       ),
     );
@@ -223,8 +235,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Stack(
       children: [
         RefreshIndicator(
-          color: _ink,
-          backgroundColor: _bg,
+          color: _H.ink,
+          backgroundColor: _H.bg,
           onRefresh: () => _load(refresh: true),
           child: FadeTransition(
             opacity: _pageFade,
@@ -300,7 +312,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// WIDGETS INTERNES (tout dans ce fichier)
+// WIDGETS INTERNES
 // ═══════════════════════════════════════════════════════════════
 
 class _Navbar extends StatelessWidget {
@@ -317,7 +329,7 @@ class _Navbar extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 32),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+        border: Border(bottom: BorderSide(color: _H.border)),
       ),
       child: Row(
         children: [
@@ -326,7 +338,7 @@ class _Navbar extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: const Color(0xFF0F172A),
+              color: _H.ink,
               borderRadius: BorderRadius.circular(10),
             ),
             alignment: Alignment.center,
@@ -336,22 +348,22 @@ class _Navbar extends StatelessWidget {
           const SizedBox(width: 10),
           const Text('SONATHIX',
               style: TextStyle(
-                  color: Color(0xFF0F172A),
+                  color: _H.ink,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.2,
                   fontSize: 15)),
           const Spacer(),
           if (!compact) ...[
-            _NavLink(label: 'Accueil'),
-            _NavLink(label: 'Solutions'),
-            _NavLink(label: 'Impact'),
-            _NavLink(label: 'Actualités'),
+            const _NavLink(label: 'Accueil'),
+            const _NavLink(label: 'Solutions'),
+            const _NavLink(label: 'Impact'),
+            const _NavLink(label: 'Actualités'),
             const SizedBox(width: 12),
           ],
           FilledButton(
             onPressed: () {},
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF0F172A),
+              backgroundColor: _H.ink,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
@@ -409,7 +421,7 @@ class _Hero extends StatelessWidget {
               const Text(
                 'TECHNOLOGIE  •  INNOVATION  •  AFRIQUE',
                 style: TextStyle(
-                  color: Color(0xFF64748B),
+                  color: _H.muted,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 2,
@@ -422,7 +434,7 @@ class _Hero extends StatelessWidget {
                     fontSize: 40,
                     fontWeight: FontWeight.w800,
                     height: 1.15,
-                    color: Color(0xFF0F172A),
+                    color: _H.ink,
                     letterSpacing: -0.8,
                   ),
                   children: [
@@ -430,7 +442,7 @@ class _Hero extends StatelessWidget {
                     if (highlight.isNotEmpty)
                       TextSpan(
                         text: highlight,
-                        style: const TextStyle(color: Color(0xFF0F172A)),
+                        style: const TextStyle(color: _H.ink),
                       ),
                   ],
                 ),
@@ -441,7 +453,7 @@ class _Hero extends StatelessWidget {
                   constraints: const BoxConstraints(maxWidth: 560),
                   child: Text(
                     paragraph,
-                    style: const TextStyle(fontSize: 16, height: 1.6, color: Color(0xFF64748B)),
+                    style: const TextStyle(fontSize: 16, height: 1.6, color: _H.muted),
                   ),
                 ),
               ],
@@ -453,7 +465,7 @@ class _Hero extends StatelessWidget {
                   FilledButton(
                     onPressed: () {},
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF0F172A),
+                      backgroundColor: _H.ink,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
@@ -464,8 +476,8 @@ class _Hero extends StatelessWidget {
                     OutlinedButton(
                       onPressed: () {},
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF0F172A),
-                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                        foregroundColor: _H.ink,
+                        side: const BorderSide(color: _H.lightBorder),
                         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                       ),
@@ -493,7 +505,7 @@ class _About extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      color: const Color(0xFFF8FAFC),
+      color: _H.surface,
       padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
       child: Center(
         child: ConstrainedBox(
@@ -506,7 +518,7 @@ class _About extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
+                  color: _H.ink,
                   height: 1.25,
                 ),
               ),
@@ -514,7 +526,7 @@ class _About extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   vision,
-                  style: const TextStyle(fontSize: 15, height: 1.65, color: Color(0xFF64748B)),
+                  style: const TextStyle(fontSize: 15, height: 1.65, color: _H.muted),
                 ),
               ],
               if (features.isNotEmpty) ...[
@@ -555,17 +567,17 @@ class _PillarCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: _H.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
               style: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+                  fontSize: 16, fontWeight: FontWeight.w800, color: _H.ink)),
           if (text.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text(text, style: const TextStyle(fontSize: 13, height: 1.55, color: Color(0xFF64748B))),
+            Text(text, style: const TextStyle(fontSize: 13, height: 1.55, color: _H.muted)),
           ],
         ],
       ),
@@ -598,7 +610,7 @@ class _Solutions extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF64748B),
+                  color: _H.muted,
                   letterSpacing: 1.5,
                 ),
               ),
@@ -608,7 +620,7 @@ class _Solutions extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
+                  color: _H.ink,
                   height: 1.25,
                 ),
               ),
@@ -659,10 +671,10 @@ class _SolutionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: featured ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+        color: featured ? _H.ink : _H.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: featured ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
+          color: featured ? _H.ink : _H.border,
         ),
       ),
       child: Column(
@@ -673,7 +685,7 @@ class _SolutionCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
-              color: featured ? Colors.white : const Color(0xFF0F172A),
+              color: featured ? Colors.white : _H.ink,
             ),
           ),
           if (subtitle.isNotEmpty) ...[
@@ -683,7 +695,7 @@ class _SolutionCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: featured ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                color: featured ? _H.subtext : _H.muted,
               ),
             ),
           ],
@@ -694,7 +706,7 @@ class _SolutionCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 height: 1.5,
-                color: featured ? const Color(0xFFCBD5E1) : const Color(0xFF64748B),
+                color: featured ? _H.lightBorder : _H.muted,
               ),
             ),
           ],
@@ -711,7 +723,6 @@ class _ProductHighlight extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // On réutilise hero / solutions pour ne rien hardcoder
     final title = content.solutions.isNotEmpty
         ? content.solutions.first.title
         : content.heroTitle;
@@ -724,7 +735,7 @@ class _ProductHighlight extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      color: const Color(0xFF0F172A),
+      color: _H.ink,
       padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
       child: Center(
         child: ConstrainedBox(
@@ -734,7 +745,7 @@ class _ProductHighlight extends StatelessWidget {
               const Text(
                 'PRODUIT PHARE',
                 style: TextStyle(
-                  color: Color(0xFF94A3B8),
+                  color: _H.subtext,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 2,
@@ -756,7 +767,7 @@ class _ProductHighlight extends StatelessWidget {
                 Text(
                   text,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 15, height: 1.6),
+                  style: const TextStyle(color: _H.lightBorder, fontSize: 15, height: 1.6),
                 ),
               ],
               if (cta.isNotEmpty) ...[
@@ -765,7 +776,7 @@ class _ProductHighlight extends StatelessWidget {
                   onPressed: () {},
                   style: FilledButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF0F172A),
+                    foregroundColor: _H.ink,
                     padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                   ),
@@ -805,7 +816,7 @@ class _Impact extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF64748B),
+                  color: _H.muted,
                   letterSpacing: 1.5,
                 ),
               ),
@@ -816,7 +827,7 @@ class _Impact extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
+                  color: _H.ink,
                 ),
               ),
               if (stats.isNotEmpty) ...[
@@ -835,14 +846,14 @@ class _Impact extends StatelessWidget {
                                   style: const TextStyle(
                                     fontSize: 32,
                                     fontWeight: FontWeight.w800,
-                                    color: Color(0xFF0F172A),
+                                    color: _H.ink,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
                                   s.label,
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.35),
+                                  style: const TextStyle(fontSize: 12, color: _H.muted, height: 1.35),
                                 ),
                               ],
                             ),
@@ -858,7 +869,7 @@ class _Impact extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
+                    color: _H.ink,
                     height: 1.4,
                   ),
                 ),
@@ -871,15 +882,13 @@ class _Impact extends StatelessWidget {
   }
 }
 
-// ── Actualités (utilise features en fallback si pas de news dédiées) ──
+// ── Actualités ──────────────────────────────────────────────────
 class _News extends StatelessWidget {
   const _News({required this.content});
   final SiteContent content;
 
   @override
   Widget build(BuildContext context) {
-    // Pas de modèle News dédié → on n'affiche rien si vide
-    // (évite le hardcode). Tu pourras brancher content.news plus tard.
     return const SizedBox.shrink();
   }
 }
@@ -889,13 +898,13 @@ class _CtaBand extends StatelessWidget {
   const _CtaBand({required this.content});
   final SiteContent content;
 
-  @override
+  @style
   Widget build(BuildContext context) {
     final cta = content.ctaPrimary.isNotEmpty ? content.ctaPrimary : 'Nous contacter';
 
     return Container(
       width: double.infinity,
-      color: const Color(0xFFF8FAFC),
+      color: _H.surface,
       padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
       child: Center(
         child: ConstrainedBox(
@@ -908,7 +917,7 @@ class _CtaBand extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
+                  color: _H.ink,
                   height: 1.3,
                 ),
               ),
@@ -916,13 +925,13 @@ class _CtaBand extends StatelessWidget {
               const Text(
                 'Vous êtes une entreprise, une institution, un investisseur ou un partenaire ? Parlons de ce que nous pouvons construire ensemble.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, height: 1.55, color: Color(0xFF64748B)),
+                style: TextStyle(fontSize: 14, height: 1.55, color: _H.muted),
               ),
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: () {},
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF0F172A),
+                  backgroundColor: _H.ink,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
@@ -950,7 +959,7 @@ class _Footer extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      color: const Color(0xFF0F172A),
+      color: _H.ink,
       padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
       child: Column(
         children: [
@@ -966,12 +975,12 @@ class _Footer extends StatelessWidget {
           const SizedBox(height: 8),
           const Text(
             'Technology  •  Innovation  •  Africa',
-            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+            style: TextStyle(color: _H.subtext, fontSize: 12),
           ),
           const SizedBox(height: 20),
           Text(
             legal,
-            style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+            style: const TextStyle(color: _H.muted, fontSize: 12),
             textAlign: TextAlign.center,
           ),
         ],
@@ -996,20 +1005,20 @@ class _ConsentBanner extends StatelessWidget {
     return Material(
       elevation: 10,
       borderRadius: BorderRadius.circular(14),
-      color: const Color(0xFF0F172A),
+      color: _H.ink,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(text, style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12, height: 1.45)),
+            Text(text, style: const TextStyle(color: _H.lightBorder, fontSize: 12, height: 1.45)),
             const SizedBox(height: 14),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
                   onPressed: onRefuse,
-                  style: TextButton.styleFrom(foregroundColor: const Color(0xFF94A3B8)),
+                  style: TextButton.styleFrom(foregroundColor: _H.subtext),
                   child: const Text('Refuser'),
                 ),
                 const SizedBox(width: 8),
@@ -1017,7 +1026,7 @@ class _ConsentBanner extends StatelessWidget {
                   onPressed: onAccept,
                   style: FilledButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF0F172A),
+                    foregroundColor: _H.ink,
                   ),
                   child: const Text('Accepter'),
                 ),
@@ -1042,7 +1051,7 @@ class _RoundIconButton extends StatelessWidget {
       label: label,
       button: true,
       child: Material(
-        color: const Color(0xFF0F172A),
+        color: _H.ink,
         borderRadius: BorderRadius.circular(999),
         elevation: 6,
         child: InkWell(
@@ -1068,7 +1077,7 @@ class _Skeleton extends StatelessWidget {
       child: SizedBox(
         width: 28,
         height: 28,
-        child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF0F172A)),
+        child: CircularProgressIndicator(strokeWidth: 2.5, color: _H.ink),
       ),
     );
   }
@@ -1091,20 +1100,20 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               isTimeout ? 'Délai dépassé' : 'Impossible de charger la page',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _H.ink),
             ),
             const SizedBox(height: 8),
             const Text(
               'Vérifiez votre connexion puis réessayez.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF64748B)),
+              style: TextStyle(color: _H.muted),
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Réessayer'),
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0F172A)),
+              style: FilledButton.styleFrom(backgroundColor: _H.ink),
             ),
           ],
         ),

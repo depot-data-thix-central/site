@@ -235,21 +235,27 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   // ── Upload ───────────────────────────────────────────────────
-  Future<String?> _uploadToSupabase(String folder) async {
+    Future<String?> _uploadToSupabase(String folder) async {
     try {
       final picker = ImagePicker();
-      final xfile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+      
+      // ❌ L'ERREUR VENAIT D'ICI : On retire `imageQuality: 80`
+      // Sur Flutter Web mobile, la tentative de compression révoque le Blob.
+      final xfile = await picker.pickImage(source: ImageSource.gallery);
+      
       if (xfile == null) return null;
 
-      // Utilisation des bytes pour compatibilité parfaite avec le Web
+      // Lecture des bytes bruts
       final bytes = await xfile.readAsBytes();
+      
+      // Extraction de l'extension (avec fallback sur png si introuvable sur le web)
       final ext = xfile.name.split('.').last.toLowerCase();
       final validExt = ['png', 'jpg', 'jpeg', 'webp', 'gif'].contains(ext) ? ext : 'png';
       
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.$validExt';
       final path = '$folder/$fileName';
 
-      // uploadBinary est obligatoire sur Web
+      // Upload binaire vers Supabase
       await Supabase.instance.client.storage.from('images').uploadBinary(
         path,
         bytes,
@@ -266,6 +272,7 @@ class _AdminScreenState extends State<AdminScreen> {
       return null;
     }
   }
+
 
   // ── Data ─────────────────────────────────────────────────────
   Future<void> _loadContent() async {

@@ -121,8 +121,9 @@ class ContentService {
     if (kReleaseMode && event != 'all_retries_failed') return;
     final b = StringBuffer('[ContentService] $event');
     if (ctx != null && ctx.isNotEmpty) {
-      b.write(' | \( {ctx.entries.map((e) => ' \){e.key}=${e.value}').join(', ')}');
+      b.write(
+        ' | \( {ctx.entries.map((e) => ' \){e.key}=${e.value}').join(', ')}',
+      );
     }
     debugPrint(b.toString());
   }
-}

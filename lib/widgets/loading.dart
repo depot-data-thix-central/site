@@ -85,7 +85,7 @@ class _AppLoadingState extends State<AppLoading> with TickerProviderStateMixin {
                           ),
                         ],
                       ),
-                      child: Center(
+                      child: const Center(
                         child: Text(
                           'S',
                           style: TextStyle(

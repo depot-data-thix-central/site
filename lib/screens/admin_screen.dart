@@ -798,7 +798,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
             children: [
               _settingRow(Icons.timer_outlined, 'Session', 'Expiration automatique après 15 min d’inactivité.'),
               _settingRow(Icons.shield_outlined, 'Entrées', 'Tous les champs sont nettoyés avant enregistrement.'),
-              _settingRow(Icons.no_logs_outlined, 'Logs', 'Aucune donnée sensible n’est journalisée en production.'),
+              _settingRow(Icons.article_outlined, 'Logs', 'Aucune donnée sensible n’est journalisée en production.'),
             ],
           ),
         ),

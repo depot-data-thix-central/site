@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Modèle complet du site.
 ///
 /// Caractéristiques :
@@ -9,6 +11,7 @@
 /// - SEO enrichi (OG tags, canonical, etc.)
 /// - Métadonnées admin (version, lastUpdated)
 /// - Aucun contenu métier hardcodé
+@immutable
 class SiteContent {
   // SEO
   final String seoTitle;
@@ -73,54 +76,20 @@ class SiteContent {
     this.updatedBy,
   });
 
-  /// Contenu de démonstration pour développement et tests.
-  /// 
-  /// Utiliser uniquement en dev/demo, jamais en production.
+  /// Instance vierge. Tout le contenu est géré via l'administration/backend.
+  factory SiteContent.empty() {
+    return const SiteContent();
+  }
+
+  /// Alias pour compatibilité de test, retourne une instance vierge sans texte en dur.
   factory SiteContent.demo() {
-    return SiteContent(
-      seoTitle: 'SONATHIX GROUP',
-      seoDescription: 'SONATHIX GROUP développe des solutions technologiques pour une Afrique plus connectée, sécurisée et innovante.',
-      heroTitle: 'Construire la confiance numérique de ',
-      heroHighlight: 'demain.',
-      heroParagraph: 'SONATHIX GROUP développe des solutions technologiques pour une Afrique plus connectée, sécurisée et innovante.',
-      ctaPrimary: 'Découvrir THIX ID',
-      ctaSecondary: 'Notre vision',
-      features: const [
-        Feature(
-          title: 'Identité numérique',
-          text: 'Solutions d\'identification sécurisées et conformes.',
-          icon: 'shield',
-        ),
-        Feature(
-          title: 'Infrastructure cloud',
-          text: 'Architecture scalable et hautement disponible.',
-          icon: 'cloud',
-        ),
-      ],
-      solutions: const [
-        Solution(
-          title: 'THIX ID',
-          subtitle: 'Identité souveraine',
-          text: 'Solution d\'identification numérique décentralisée.',
-          featured: true,
-        ),
-      ],
-      stats: const [
-        Stat(value: '10M+', label: 'Utilisateurs potentiels'),
-        Stat(value: '99.9%', label: 'Disponibilité'),
-        Stat(value: '24/7', label: 'Support'),
-      ],
-      impactQuote: 'Une Afrique plus connectée, plus forte, plus libre.',
-      visionText: 'Mettre la technologie au service des hommes et des territoires.',
-      consentText: 'Nous n\'utilisons aucun cookie publicitaire. Un stockage local strictement nécessaire peut être utilisé.',
-      footerLegal: '© 2026 SONATHIX GROUP. Tous droits réservés.',
-    );
+    return const SiteContent();
   }
 
   /// Crée une instance depuis un JSON.
   ///
   /// Sanitize automatiquement les textes et valide les longueurs.
-  /// Ne crash jamais : retourne des valeurs vides en cas d'erreur.
+  /// Ne crash jamais : retourne une instance vide en cas d'erreur.
   factory SiteContent.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const SiteContent();
 
@@ -159,13 +128,12 @@ class SiteContent {
         lastUpdated: meta['lastUpdated'] is String ? DateTime.tryParse(meta['lastUpdated'] as String) : null,
         updatedBy: _safeString(meta['updatedBy'], defaultValue: null, maxLength: 100),
       );
-    } catch (e) {
-      // En cas d'erreur de parsing, retourner vide
+    } catch (_) {
       return const SiteContent();
     }
   }
 
-  /// Sérialise en JSON pour sauvegarde.
+  /// Sérialise en JSON pour sauvegarde backend/admin.
   Map<String, dynamic> toJson() {
     return {
       'seo': {
@@ -266,9 +234,7 @@ class SiteContent {
     );
   }
 
-  /// Fusionne avec un autre contenu (utile pour admin partiel).
-  ///
-  /// Les champs non-vides de [other] remplacent ceux de [this].
+  /// Fusionne avec un autre contenu (utile pour l'administration).
   SiteContent merge(SiteContent other) {
     return copyWith(
       seoTitle: other.seoTitle.isNotEmpty ? other.seoTitle : null,
@@ -354,7 +320,7 @@ class SiteContent {
   }
 
   // -------------------------------------------------------------------------
-  // SECURITY HELPERS
+  // SECURITY & SANITIZATION HELPERS
   // -------------------------------------------------------------------------
 
   static String _safeString(
@@ -389,7 +355,6 @@ class SiteContent {
     final uri = Uri.tryParse(str);
     if (uri == null || !uri.hasScheme) return null;
 
-    // HTTPS uniquement pour la sécurité
     if (!uri.isScheme('https')) return null;
 
     return _truncateSafely(str, 500);
@@ -464,6 +429,7 @@ class SiteContent {
 }
 
 /// Feature (caractéristique produit/service).
+@immutable
 class Feature {
   final String title;
   final String text;
@@ -501,6 +467,7 @@ class Feature {
 }
 
 /// Solution (offre commerciale).
+@immutable
 class Solution {
   final String title;
   final String subtitle;
@@ -541,6 +508,7 @@ class Solution {
 }
 
 /// Stat (chiffre clé).
+@immutable
 class Stat {
   final String value;
   final String label;

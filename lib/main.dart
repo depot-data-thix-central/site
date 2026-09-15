@@ -1,4 +1,4 @@
-import 'dart:async'; // ← Requis pour runZonedGuarded
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -19,33 +19,31 @@ Future<void> main() async {
   runZonedGuarded<Future<void>>(() async {
     WidgetsFlutterBinding.ensureInitialized();
 
-    // Ecran d'erreur personnalisé
-    ErrorWidget.builder = (FlutterErrorDetails details) {
-      return _DebugErrorScreen(
-        error: details.exceptionAsString(),
-        stack: details.stack.toString(),
-      );
-    };
-
-    // Logging des erreurs Flutter
-    FlutterError.onError = (FlutterErrorDetails details) {
-      _reportError(details.exception, details.stack ?? StackTrace.empty,
-          source: 'FlutterError');
-      FlutterError.presentError(details);
-    };
-
-    // URLs propres sans /#/
-    if (kIsWeb) {
-      usePathUrlStrategy();
-    }
-
     void removeLoading() {
       try {
         web.document.getElementById('loading')?.remove();
       } catch (_) {}
     }
 
-    // Initialisation Supabase
+    // Retrait immédiat de l'overlay HTML si une erreur de rendu survient
+    ErrorWidget.builder = (FlutterErrorDetails details) {
+      removeLoading();
+      return _DebugErrorScreen(
+        error: details.exceptionAsString(),
+        stack: details.stack.toString(),
+      );
+    };
+
+    FlutterError.onError = (FlutterErrorDetails details) {
+      _reportError(details.exception, details.stack ?? StackTrace.empty,
+          source: 'FlutterError');
+      FlutterError.presentError(details);
+    };
+
+    if (kIsWeb) {
+      usePathUrlStrategy();
+    }
+
     try {
       await Supabase.initialize(
         url: Env.supabaseUrl,
@@ -57,7 +55,8 @@ Future<void> main() async {
 
     runApp(const SonathixApp());
 
-    // Retrait de l'écran de chargement
+    // Retrait systématique du spinner d'attente
+    removeLoading();
     WidgetsBinding.instance.addPostFrameCallback((_) => removeLoading());
     Future.delayed(const Duration(milliseconds: 800), removeLoading);
   }, (error, stack) {

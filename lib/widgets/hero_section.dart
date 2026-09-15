@@ -83,9 +83,11 @@ class _HeroSectionState extends State<HeroSection>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.auto_awesome_rounded, size: 14, color: AppColors.gold),
-           const SizedBox(width: 6),
-          const Text(
+          // Correction : Ajout du const ici pour optimiser les performances (info linter)
+          const Icon(Icons.auto_awesome_rounded, size: 14, color: AppColors.gold),
+          const SizedBox(width: 6),
+          // Correction de l'erreur fatale : Retrait du const devant Text car 'text' est une variable dynamique
+          Text(
             text,
             style: const TextStyle(
               fontSize: 12,

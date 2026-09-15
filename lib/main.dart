@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:web/web.dart' as web;
-import 'dart:ui_web' as ui_web;
+import 'package:flutter_web_plugins/url_strategy.dart'; // ← Bon import pour les URL web
 
 import 'theme.dart';
 import 'security.dart';
@@ -14,7 +14,7 @@ Future<void> main() async {
 
   // URLs propres : / et /admin (au lieu de /#/ et /#/admin)
   if (kIsWeb) {
-    ui_web.usePathUrlStrategy();
+    usePathUrlStrategy(); // ← Appel direct de la fonction
   }
 
   // Initialisation Supabase (clé anon = clé publique, sécurité assurée par RLS)

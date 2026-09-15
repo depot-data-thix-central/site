@@ -575,7 +575,7 @@ class VisionSection extends StatelessWidget {
   Widget build(BuildContext context) => Container(color: Colors.white,
     child: R.centered(Padding(padding: const EdgeInsets.symmetric(vertical: 64),
       child: LayoutBuilder(builder: (context, c) {
-        final visual = const SizedBox(width: 300, height: 300,
+        final visual =  SizedBox(width: 300, height: 300,
             child: CustomPaint(painter: SunrisePainter(), size: Size(300, 300)));
         final middle = Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 36),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

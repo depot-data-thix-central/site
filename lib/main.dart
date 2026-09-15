@@ -10,7 +10,7 @@ import 'admin.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy(); // URLs propres : / et /admin
-  await Supabase.initialize(url: Env.supabaseUrl, anonKey: Env.supabaseAnonKey);
+  await Supabase.initialize(url: Env.supabaseUrl, publishableKey: Env.supabaseAnonKey);
   runApp(const SonathixApp());
   // Retire l'écran de chargement HTML après le 1er rendu
   WidgetsBinding.instance.addPostFrameCallback(

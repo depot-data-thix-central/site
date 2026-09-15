@@ -82,9 +82,11 @@ class _SolutionsSectionState extends State<SolutionsSection>
         children.add(const Expanded(child: SizedBox.shrink()));
       }
     }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: children,
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
     );
   }
 

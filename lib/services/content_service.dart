@@ -1,30 +1,21 @@
 import 'dart:async';
-
 import 'package:flutter/foundation.dart';
-
 import '../models/content.dart';
 import 'supabase_service.dart';
 
-/// Service de chargement du contenu publié (Supabase).
-///
-/// - Retry + backoff
-/// - Timeout
-/// - Cache mémoire (TTL 5 min)
-/// - forceRefresh pour l'admin après publication
-/// - Fallback toujours sûr (SiteContent vide)
 class ContentService {
-  ContentService();
+  // Pattern Singleton pour garantir un cache unique
+  static final ContentService _instance = ContentService._internal();
+  factory ContentService() => _instance;
+  ContentService._internal();
 
   static const Duration _requestTimeout = Duration(seconds: 8);
   static const int _maxRetries = 3;
   static const Duration _cacheTTL = Duration(minutes: 5);
 
-  SiteContent? _cached;
-  DateTime? _cachedAt;
+  static SiteContent? _cached;
+  static DateTime? _cachedAt;
 
-  /// Charge le contenu publié.
-  ///
-  /// [forceRefresh] ignore le cache (utilisé par l'admin après publish).
   Future<SiteContent> loadPublished({bool forceRefresh = false}) async {
     if (!forceRefresh && _isCacheValid()) {
       _log('cache_hit');
@@ -66,7 +57,6 @@ class ContentService {
       'errorType': lastError?.runtimeType.toString() ?? 'unknown',
     });
 
-    // Dernier recours : ancien cache si encore présent
     if (_cached != null) {
       _log('stale_cache_fallback');
       return _cached!;
@@ -97,8 +87,11 @@ class ContentService {
     try {
       final data = Map<String, dynamic>.from(raw);
       return SiteContent.fromJson(data);
-    } catch (e) {
-      _log('parse_failed', {'errorType': e.runtimeType.toString()});
+    } catch (e, st) {
+      _log('parse_failed', {
+        'error': e.toString(),
+        'trace': st.toString(),
+      });
       return _fallback();
     }
   }
@@ -108,7 +101,6 @@ class ContentService {
     return DateTime.now().difference(_cachedAt!) < _cacheTTL;
   }
 
-  /// À appeler après une publication admin réussie.
   void invalidateCache() {
     _cached = null;
     _cachedAt = null;

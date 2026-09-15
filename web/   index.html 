@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
+                 img-src 'self' data: blob: https://vmqedusamwdgfatgtgck.supabase.co;
+                 font-src 'self' data:;
+                 connect-src 'self' https://vmqedusamwdgfatgtgck.supabase.co wss://vmqedusamwdgfatgtgck.supabase.co;
+                 base-uri 'self'; form-action 'self'; object-src 'none';
+                 manifest-src 'self'; worker-src 'self'; child-src 'self' blob:;">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="description" content="SONATHIX GROUP développe des solutions technologiques souveraines et sécurisées pour une Afrique plus connectée, sécurisée et innovante.">
+  <meta name="theme-color" content="#0A1628">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="SONATHIX GROUP — Construire la confiance numérique de demain">
+  <meta property="og:locale" content="fr_FR">
+  <title>SONATHIX GROUP — Construire la confiance numérique de demain</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    html,body{margin:0;padding:0;background:#0A1628;height:100%}
+    #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+             font-family:sans-serif;color:#C9A227;letter-spacing:.25em;font-size:11px;font-weight:700}
+    .spinner{width:40px;height:40px;margin:0 auto 14px;border:3px solid rgba(201,162,39,.25);
+             border-top-color:#C9A227;border-radius:50%;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <div id="loading"><div><div class="spinner"></div>SONATHIX GROUP</div></div>
+  <noscript>SONATHIX GROUP nécessite JavaScript. Merci de l'activer pour continuer.</noscript>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

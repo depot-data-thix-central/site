@@ -843,6 +843,7 @@ class _SolutionCard extends StatelessWidget {
 }
 
 // ── Mot du Manager ─────────────────────────────────────────────
+
 class _ManagerSection extends StatelessWidget {
   const _ManagerSection({required this.content});
   final SiteContent content;
@@ -853,7 +854,7 @@ class _ManagerSection extends StatelessWidget {
     final message = content.managerMessage;
     final photoUrl = content.managerPhotoUrl;
 
-    if ((name == null || name.isEmpty) && (message == null || message.isEmpty)) {
+    if (name.isEmpty && message.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -892,7 +893,7 @@ class _ManagerSection extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'MOT DU DIRECTION',
+                        'MOT DE LA DIRECTION',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -901,12 +902,12 @@ class _ManagerSection extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      if (message != null && message.isNotEmpty)
+                      if (message.isNotEmpty)
                         Text(
                           '"$message"',
                           style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic, height: 1.6, color: _H.ink),
                         ),
-                      if (name != null && name.isNotEmpty) ...[
+                      if (name.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         Text(
                           name,

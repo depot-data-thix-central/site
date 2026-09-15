@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../models/content.dart';
 import '../services/content_service.dart';
@@ -96,16 +97,15 @@ class _AdminScreenState extends State<AdminScreen> {
   bool _obscure = true;
   String? _authError;
 
-  // Session
-  Timer? _sessionTimer;
-  static const _sessionTimeout = Duration(minutes: 15);
-
   // State
   _AdminTab _tab = _AdminTab.dashboard;
   SiteContent? _original;
   bool _loading = true;
   Object? _error;
   _PublishState _publishState = _PublishState.draft;
+  
+  // Variables pour l'upload d'images
+  final Set<String> _uploading = {};
 
   // Editors
   final Map<String, TextEditingController> _text = {};
@@ -115,11 +115,14 @@ class _AdminScreenState extends State<AdminScreen> {
   final List<_EditableStat> _stats = [];
 
   static const _scalarKeys = [
-    'seoTitle', 'seoDescription', 'seoKeywords', 'seoOgImage', 'seoCanonicalUrl',
+    'seoTitle', 'seoDescription', 'seoKeywords', 'seoCanonicalUrl',
     'heroTitle', 'heroHighlight', 'heroParagraph', 'ctaPrimary', 'ctaSecondary',
+    'managerName', 'managerMessage',
     'impactQuote', 'visionText', 'consentText', 'footerLegal',
   ];
-  static const _imageKeys = ['heroImageUrl', 'visionImageUrl'];
+  static const _imageKeys = [
+    'seoOgImage', 'heroImageUrl', 'visionImageUrl', 'managerPhotoUrl'
+  ];
 
   @override
   void initState() {
@@ -130,28 +133,45 @@ class _AdminScreenState extends State<AdminScreen> {
     for (final k in _imageKeys) {
       _images[k] = TextEditingController();
     }
+    
+    // Vérifier s'il y a déjà une session active au démarrage
+    _checkExistingSession();
   }
 
   @override
   void dispose() {
-    _sessionTimer?.cancel();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
-    for (final c in _text.values) {
-      c.dispose();
-    }
-    for (final c in _images.values) {
-      c.dispose();
-    }
+    for (final c in _text.values) c.dispose();
+    for (final c in _images.values) c.dispose();
     super.dispose();
   }
 
   // ── Auth ─────────────────────────────────────────────────────
-  void _startSession() {
-    _sessionTimer?.cancel();
-    _sessionTimer = Timer(_sessionTimeout, () {
-      if (mounted) _logout(reason: 'Session expirée (inactivité).');
-    });
+  Future<void> _checkExistingSession() async {
+    final session = Supabase.instance.client.auth.currentSession;
+    
+    if (session != null) {
+      try {
+        final profile = await Supabase.instance.client
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .maybeSingle();
+            
+        if (profile != null && profile['role'] != 'admin') {
+          await Supabase.instance.client.auth.signOut();
+          return;
+        }
+
+        if (mounted) {
+          setState(() => _authenticated = true);
+          await _loadContent();
+        }
+      } catch (_) {
+        // En cas d'erreur de vérification, on reste sur l'écran de login
+      }
+    }
   }
 
   Future<void> _login() async {
@@ -168,7 +188,6 @@ class _AdminScreenState extends State<AdminScreen> {
       );
       if (res.user == null) throw Exception('no user');
 
-      // Optionnel : vérifier rôle admin
       try {
         final profile = await Supabase.instance.client
             .from('profiles')
@@ -179,13 +198,10 @@ class _AdminScreenState extends State<AdminScreen> {
           await Supabase.instance.client.auth.signOut();
           throw Exception('not admin');
         }
-      } catch (_) {
-        // Si table profiles absente, on laisse passer (dev)
-      }
+      } catch (_) {}
 
       if (!mounted) return;
       setState(() => _authenticated = true);
-      _startSession();
       await _loadContent();
     } catch (_) {
       if (!mounted) return;
@@ -203,7 +219,6 @@ class _AdminScreenState extends State<AdminScreen> {
     try {
       await Supabase.instance.client.auth.signOut();
     } catch (_) {}
-    _sessionTimer?.cancel();
     if (!mounted) return;
     setState(() {
       _authenticated = false;
@@ -212,6 +227,37 @@ class _AdminScreenState extends State<AdminScreen> {
     });
     if (reason != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(reason)));
+    }
+  }
+
+  // ── Upload ───────────────────────────────────────────────────
+  Future<String?> _uploadToSupabase(String folder) async {
+    try {
+      final picker = ImagePicker();
+      final xfile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+      if (xfile == null) return null;
+
+      final bytes = await xfile.readAsBytes();
+      final ext = xfile.name.split('.').last.toLowerCase();
+      final validExt = ['png', 'jpg', 'jpeg', 'webp', 'gif'].contains(ext) ? ext : 'png';
+      
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.$validExt';
+      final path = '$folder/$fileName';
+
+      await Supabase.instance.client.storage.from('images').uploadBinary(
+        path,
+        bytes,
+        fileOptions: FileOptions(contentType: 'image/$validExt'),
+      );
+
+      return Supabase.instance.client.storage.from('images').getPublicUrl(path);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur d\'upload : $e'), backgroundColor: _A.danger),
+        );
+      }
+      return null;
     }
   }
 
@@ -229,7 +275,7 @@ class _AdminScreenState extends State<AdminScreen> {
       _text['seoTitle']?.text = content.seoTitle;
       _text['seoDescription']?.text = content.seoDescription;
       _text['seoKeywords']?.text = content.seoKeywords;
-      _text['seoOgImage']?.text = content.seoOgImage;
+      _images['seoOgImage']?.text = content.seoOgImage;
       _text['seoCanonicalUrl']?.text = content.seoCanonicalUrl;
       _text['heroTitle']?.text = content.heroTitle;
       _text['heroHighlight']?.text = content.heroHighlight;
@@ -237,6 +283,12 @@ class _AdminScreenState extends State<AdminScreen> {
       _text['ctaPrimary']?.text = content.ctaPrimary;
       _text['ctaSecondary']?.text = content.ctaSecondary;
       _images['heroImageUrl']?.text = content.heroImageUrl ?? '';
+      
+      // Assurez-vous d'ajouter ces propriétés à votre classe SiteContent
+      // _text['managerName']?.text = content.managerName ?? '';
+      // _text['managerMessage']?.text = content.managerMessage ?? '';
+      // _images['managerPhotoUrl']?.text = content.managerPhotoUrl ?? '';
+
       _text['impactQuote']?.text = content.impactQuote;
       _text['visionText']?.text = content.visionText;
       _images['visionImageUrl']?.text = content.visionImageUrl ?? '';
@@ -267,7 +319,6 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   Future<void> _save({required bool publish}) async {
-    _startSession();
     setState(() => _publishState = _PublishState.publishing);
 
     try {
@@ -275,7 +326,7 @@ class _AdminScreenState extends State<AdminScreen> {
         seoTitle: _text['seoTitle']?.text ?? '',
         seoDescription: _text['seoDescription']?.text ?? '',
         seoKeywords: _text['seoKeywords']?.text ?? '',
-        seoOgImage: _text['seoOgImage']?.text ?? '',
+        seoOgImage: _images['seoOgImage']?.text ?? '',
         seoCanonicalUrl: _text['seoCanonicalUrl']?.text ?? '',
         heroTitle: _text['heroTitle']?.text ?? '',
         heroHighlight: _text['heroHighlight']?.text ?? '',
@@ -283,6 +334,12 @@ class _AdminScreenState extends State<AdminScreen> {
         ctaPrimary: _text['ctaPrimary']?.text ?? '',
         ctaSecondary: _text['ctaSecondary']?.text ?? '',
         heroImageUrl: _httpsOrNull(_images['heroImageUrl']?.text),
+        
+        // Assurez-vous d'avoir ces paramètres dans le constructeur de SiteContent
+        // managerName: _text['managerName']?.text ?? '',
+        // managerMessage: _text['managerMessage']?.text ?? '',
+        // managerPhotoUrl: _httpsOrNull(_images['managerPhotoUrl']?.text),
+
         features: _features.map((e) => e.toModel()).toList(),
         solutions: _solutions.map((e) => e.toModel()).toList(),
         stats: _stats.map((e) => e.toModel()).toList(),
@@ -295,7 +352,6 @@ class _AdminScreenState extends State<AdminScreen> {
         lastUpdated: DateTime.now(),
       );
 
-      // Publication réelle Supabase
       final client = Supabase.instance.client;
       await client.from('content_published').upsert({
         'id': 1,
@@ -303,7 +359,6 @@ class _AdminScreenState extends State<AdminScreen> {
         'published_at': DateTime.now().toIso8601String(),
       });
 
-      // Optionnel : aussi draft
       await client.from('content_draft').upsert({
         'id': 1,
         'data': newContent.toJson(),
@@ -383,7 +438,6 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // Login
   Widget _buildLogin() { 
     return Center(
       child: SingleChildScrollView(
@@ -476,7 +530,6 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // Shell
   Widget _shell() {
     final wide = MediaQuery.sizeOf(context).width >= 900;
     return Row(
@@ -681,7 +734,6 @@ class _AdminScreenState extends State<AdminScreen> {
     }
   }
 
-  // Dashboard
   Widget _dashboard() {
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -735,7 +787,7 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // Content editor
+  // ── Éditeur de contenu principal ───────────────────────────────
   Widget _contentEditor() {
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -744,21 +796,31 @@ class _AdminScreenState extends State<AdminScreen> {
         _field('seoTitle', 'Titre SEO'),
         _field('seoDescription', 'Description SEO', maxLines: 2),
         _field('seoKeywords', 'Mots-clés'),
-        _imageField('seoOgImage', 'URL Image Open Graph'),
+        _imageUploadField('seoOgImage', 'Image Open Graph (SEO)', 'seo'),
         const SizedBox(height: 28),
+        
         _sectionTitle('Hero'),
         _field('heroTitle', 'Titre principal'),
         _field('heroHighlight', 'Mise en avant'),
         _field('heroParagraph', 'Paragraphe', maxLines: 4),
-        _imageField('heroImageUrl', 'URL Image Hero'),
+        _imageUploadField('heroImageUrl', 'Image principale (Hero)', 'hero'),
         _field('ctaPrimary', 'Bouton principal'),
         _field('ctaSecondary', 'Bouton secondaire'),
         const SizedBox(height: 28),
+
+        // ── SECTION MANAGER ──
+        _sectionTitle('Mot du Manager'),
+        _field('managerName', 'Nom du manager'),
+        _field('managerMessage', 'Message du manager', maxLines: 5),
+        _imageUploadField('managerPhotoUrl', 'Photo du manager', 'manager'),
+        const SizedBox(height: 28),
+
         _sectionTitle('Impact & Vision'),
         _field('impactQuote', 'Citation d’impact', maxLines: 3),
         _field('visionText', 'Texte vision', maxLines: 5),
-        _imageField('visionImageUrl', 'URL Image Vision'),
+        _imageUploadField('visionImageUrl', 'Image de la section Vision', 'vision'),
         const SizedBox(height: 28),
+
         _sectionTitle('Pied de page & Légal'),
         _field('consentText', 'Bannière consentement', maxLines: 3),
         _field('footerLegal', 'Mentions légales', maxLines: 3),
@@ -767,7 +829,6 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // Features CRUD
   Widget _featuresEditor() {
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -820,15 +881,20 @@ class _AdminScreenState extends State<AdminScreen> {
           item.icon = v;
           _markDirty();
         }),
-        _inlineField('URL image', item.imageUrl ?? '', (v) {
-          item.imageUrl = v.isEmpty ? null : v;
-          _markDirty();
-        }),
+        _collectionImageUploadField(
+          'Image de la feature',
+          item.imageUrl,
+          (v) => setState(() {
+            item.imageUrl = v.isEmpty ? null : v;
+            _markDirty();
+          }),
+          'feature_$i',
+          'features',
+        ),
       ],
     );
   }
 
-  // Solutions CRUD
   Widget _solutionsEditor() {
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -897,15 +963,20 @@ class _AdminScreenState extends State<AdminScreen> {
           item.text = v;
           _markDirty();
         }, maxLines: 3),
-        _inlineField('URL image', item.imageUrl ?? '', (v) {
-          item.imageUrl = v.isEmpty ? null : v;
-          _markDirty();
-        }),
+        _collectionImageUploadField(
+          'Image de la solution',
+          item.imageUrl,
+          (v) => setState(() {
+            item.imageUrl = v.isEmpty ? null : v;
+            _markDirty();
+          }),
+          'solution_$i',
+          'solutions',
+        ),
       ],
     );
   }
 
-  // Stats CRUD
   Widget _statsEditor() {
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -987,7 +1058,6 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // Settings
   Widget _settings() {
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -999,7 +1069,7 @@ class _AdminScreenState extends State<AdminScreen> {
           child: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('• Session expirée après 15 min d’inactivité', style: TextStyle(color: _A.muted)),
+              Text('• Connexion permanente activée', style: TextStyle(color: _A.muted)),
               SizedBox(height: 6),
               Text('• URLs d’images restreintes à HTTPS', style: TextStyle(color: _A.muted)),
               SizedBox(height: 6),
@@ -1024,7 +1094,7 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // Helpers UI
+  // ── Helpers UI & Upload Widgets ───────────────────────────────
   Widget _sectionTitle(String t) => Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: Text(t, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: _A.ink)),
@@ -1043,36 +1113,140 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  Widget _imageField(String key, String label) {
+  // Uploader pour les images uniques gérées avec des TextEditingControllers
+  Widget _imageUploadField(String key, String label, String folder) {
     final ctrl = _images[key];
     final url = ctrl?.text.trim() ?? '';
     final ok = url.startsWith('https://');
+    final isUploading = _uploading.contains(key);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextField(
-            controller: ctrl,
-            decoration: InputDecoration(
-              labelText: '$label (HTTPS)',
-              suffixIcon: ok ? const Icon(Icons.check_circle, color: _A.success) : null,
-            ),
-            onChanged: (_) => _markDirty(),
+          Text(label, style: const TextStyle(fontSize: 14, color: _A.muted, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: ctrl,
+                  style: const TextStyle(color: _A.ink, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'https://...',
+                    suffixIcon: ok ? const Icon(Icons.check_circle, color: _A.success) : null,
+                  ),
+                  onChanged: (_) => _markDirty(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              FilledButton.tonalIcon(
+                onPressed: isUploading
+                    ? null
+                    : () async {
+                        setState(() => _uploading.add(key));
+                        final newUrl = await _uploadToSupabase(folder);
+                        setState(() => _uploading.remove(key));
+                        if (newUrl != null) {
+                          ctrl?.text = newUrl;
+                          _markDirty();
+                        }
+                      },
+                style: FilledButton.styleFrom(
+                  backgroundColor: _A.ink.withValues(alpha: 0.08),
+                  foregroundColor: _A.ink,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                ),
+                icon: isUploading
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.upload_file_rounded),
+                label: const Text('Uploader'),
+              ),
+            ],
           ),
           if (ok) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Image.network(
                 url,
-                height: 100,
+                height: 140,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox(
-                  height: 100,
-                  child: Center(child: Text('Image invalide', style: TextStyle(color: _A.danger))),
+                errorBuilder: (_, __, ___) => Container(
+                  height: 140,
+                  color: _A.border,
+                  child: const Center(child: Text('Image indisponible', style: TextStyle(color: _A.danger))),
                 ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // Uploader pour les collections (Features et Solutions)
+  Widget _collectionImageUploadField(String label, String? currentUrl, ValueChanged<String> onChanged, String uploadKey, String folder) {
+    final ok = currentUrl != null && currentUrl.startsWith('https://');
+    final isUploading = _uploading.contains(uploadKey);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12, top: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 14, color: _A.muted, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  key: ValueKey(currentUrl),
+                  initialValue: currentUrl,
+                  style: const TextStyle(color: _A.ink, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'https://...',
+                    suffixIcon: ok ? const Icon(Icons.check_circle, color: _A.success) : null,
+                  ),
+                  onChanged: onChanged,
+                ),
+              ),
+              const SizedBox(width: 12),
+              FilledButton.tonalIcon(
+                onPressed: isUploading
+                    ? null
+                    : () async {
+                        setState(() => _uploading.add(uploadKey));
+                        final newUrl = await _uploadToSupabase(folder);
+                        setState(() => _uploading.remove(uploadKey));
+                        if (newUrl != null) {
+                          onChanged(newUrl);
+                        }
+                      },
+                style: FilledButton.styleFrom(
+                  backgroundColor: _A.ink.withValues(alpha: 0.08),
+                  foregroundColor: _A.ink,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                ),
+                icon: isUploading
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.upload_file_rounded),
+                label: const Text('Uploader'),
+              ),
+            ],
+          ),
+          if (ok) ...[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                currentUrl!,
+                height: 100,
+                width: 100,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: _A.muted),
               ),
             ),
           ],

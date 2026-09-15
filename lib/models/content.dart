@@ -1,4 +1,4 @@
-/// Modèle complet du site SONATHIX GROUP.
+/// Modèle complet du site.
 ///
 /// Caractéristiques :
 /// - Immutabilité garantie (listes unmodifiable)
@@ -8,6 +8,7 @@
 /// - Support images (URL + asset) pour features/solutions/hero
 /// - SEO enrichi (OG tags, canonical, etc.)
 /// - Métadonnées admin (version, lastUpdated)
+/// - Aucun contenu métier hardcodé
 class SiteContent {
   // SEO
   final String seoTitle;
@@ -46,39 +47,80 @@ class SiteContent {
   final String? updatedBy;
 
   const SiteContent({
-    this.seoTitle = 'SONATHIX GROUP',
-    this.seoDescription = 'SONATHIX GROUP développe des solutions technologiques pour une Afrique plus connectée, sécurisée et innovante.',
+    this.seoTitle = '',
+    this.seoDescription = '',
     this.seoKeywords = '',
     this.seoOgImage = '',
     this.seoCanonicalUrl = '',
-    this.heroTitle = 'Construire la confiance numérique de ',
-    this.heroHighlight = 'demain.',
-    this.heroParagraph =
-        'SONATHIX GROUP développe des solutions technologiques pour une Afrique plus connectée, sécurisée et innovante.',
-    this.ctaPrimary = 'Découvrir THIX ID',
-    this.ctaSecondary = 'Notre vision',
+    this.heroTitle = '',
+    this.heroHighlight = '',
+    this.heroParagraph = '',
+    this.ctaPrimary = '',
+    this.ctaSecondary = '',
     this.heroImageUrl,
     this.heroImageAsset,
     this.features = const [],
     this.solutions = const [],
     this.stats = const [],
-    this.impactQuote = 'Une Afrique plus connectée, plus forte, plus libre.',
-    this.visionText =
-        'Mettre la technologie au service des hommes et des territoires.',
+    this.impactQuote = '',
+    this.visionText = '',
     this.visionImageUrl,
     this.visionImageAsset,
-    this.consentText =
-        'Nous n\'utilisons aucun cookie publicitaire. Un stockage local strictement nécessaire peut être utilisé.',
-    this.footerLegal = '© 2026 SONATHIX GROUP. Tous droits réservés.',
+    this.consentText = '',
+    this.footerLegal = '',
     this.version = 1,
     this.lastUpdated,
     this.updatedBy,
   });
 
+  /// Contenu de démonstration pour développement et tests.
+  /// 
+  /// Utiliser uniquement en dev/demo, jamais en production.
+  factory SiteContent.demo() {
+    return SiteContent(
+      seoTitle: 'SONATHIX GROUP',
+      seoDescription: 'SONATHIX GROUP développe des solutions technologiques pour une Afrique plus connectée, sécurisée et innovante.',
+      heroTitle: 'Construire la confiance numérique de ',
+      heroHighlight: 'demain.',
+      heroParagraph: 'SONATHIX GROUP développe des solutions technologiques pour une Afrique plus connectée, sécurisée et innovante.',
+      ctaPrimary: 'Découvrir THIX ID',
+      ctaSecondary: 'Notre vision',
+      features: const [
+        Feature(
+          title: 'Identité numérique',
+          text: 'Solutions d\'identification sécurisées et conformes.',
+          icon: 'shield',
+        ),
+        Feature(
+          title: 'Infrastructure cloud',
+          text: 'Architecture scalable et hautement disponible.',
+          icon: 'cloud',
+        ),
+      ],
+      solutions: const [
+        Solution(
+          title: 'THIX ID',
+          subtitle: 'Identité souveraine',
+          text: 'Solution d\'identification numérique décentralisée.',
+          featured: true,
+        ),
+      ],
+      stats: const [
+        Stat(value: '10M+', label: 'Utilisateurs potentiels'),
+        Stat(value: '99.9%', label: 'Disponibilité'),
+        Stat(value: '24/7', label: 'Support'),
+      ],
+      impactQuote: 'Une Afrique plus connectée, plus forte, plus libre.',
+      visionText: 'Mettre la technologie au service des hommes et des territoires.',
+      consentText: 'Nous n\'utilisons aucun cookie publicitaire. Un stockage local strictement nécessaire peut être utilisé.',
+      footerLegal: '© 2026 SONATHIX GROUP. Tous droits réservés.',
+    );
+  }
+
   /// Crée une instance depuis un JSON.
   ///
   /// Sanitize automatiquement les textes et valide les longueurs.
-  /// Ne crash jamais : retourne des valeurs par défaut en cas d'erreur.
+  /// Ne crash jamais : retourne des valeurs vides en cas d'erreur.
   factory SiteContent.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const SiteContent();
 
@@ -92,16 +134,16 @@ class SiteContent {
       final meta = json['meta'] as Map<String, dynamic>? ?? {};
 
       return SiteContent(
-        seoTitle: _safeString(seo['title'], defaultValue: 'SONATHIX GROUP', maxLength: 80),
+        seoTitle: _safeString(seo['title'], defaultValue: '', maxLength: 80),
         seoDescription: _safeString(seo['description'], defaultValue: '', maxLength: 200),
         seoKeywords: _safeString(seo['keywords'], defaultValue: '', maxLength: 200),
         seoOgImage: _safeString(seo['ogImage'], defaultValue: '', maxLength: 500),
         seoCanonicalUrl: _safeString(seo['canonicalUrl'], defaultValue: '', maxLength: 500),
-        heroTitle: _safeString(hero['title_a'], defaultValue: 'Construire la confiance numérique de ', maxLength: 140),
-        heroHighlight: _safeString(hero['title_highlight'], defaultValue: 'demain.', maxLength: 80),
+        heroTitle: _safeString(hero['title_a'], defaultValue: '', maxLength: 140),
+        heroHighlight: _safeString(hero['title_highlight'], defaultValue: '', maxLength: 80),
         heroParagraph: _safeString(hero['paragraph'], defaultValue: '', maxLength: 600),
-        ctaPrimary: _safeString(hero['cta_primary'], defaultValue: 'Découvrir THIX ID', maxLength: 40),
-        ctaSecondary: _safeString(hero['cta_secondary'], defaultValue: 'Notre vision', maxLength: 40),
+        ctaPrimary: _safeString(hero['cta_primary'], defaultValue: '', maxLength: 40),
+        ctaSecondary: _safeString(hero['cta_secondary'], defaultValue: '', maxLength: 40),
         heroImageUrl: _safeUrl(hero['image_url']),
         heroImageAsset: _safeString(hero['image_asset'], defaultValue: null, maxLength: 200),
         features: _parseFeatures(json['features']),
@@ -112,7 +154,7 @@ class SiteContent {
         visionImageUrl: _safeUrl(vision['image_url']),
         visionImageAsset: _safeString(vision['image_asset'], defaultValue: null, maxLength: 200),
         consentText: _safeString(consent['text'], defaultValue: '', maxLength: 600),
-        footerLegal: _safeString(footer['legal'], defaultValue: '© 2026 SONATHIX GROUP', maxLength: 1200),
+        footerLegal: _safeString(footer['legal'], defaultValue: '', maxLength: 1200),
         version: meta['version'] is int ? meta['version'] as int : 1,
         lastUpdated: meta['lastUpdated'] is String ? DateTime.tryParse(meta['lastUpdated'] as String) : null,
         updatedBy: _safeString(meta['updatedBy'], defaultValue: null, maxLength: 100),
@@ -226,18 +268,25 @@ class SiteContent {
 
   /// Fusionne avec un autre contenu (utile pour admin partiel).
   ///
-  /// Les champs non-null de [other] remplacent ceux de [this].
+  /// Les champs non-vides de [other] remplacent ceux de [this].
   SiteContent merge(SiteContent other) {
     return copyWith(
       seoTitle: other.seoTitle.isNotEmpty ? other.seoTitle : null,
       seoDescription: other.seoDescription.isNotEmpty ? other.seoDescription : null,
+      seoKeywords: other.seoKeywords.isNotEmpty ? other.seoKeywords : null,
+      seoOgImage: other.seoOgImage.isNotEmpty ? other.seoOgImage : null,
+      seoCanonicalUrl: other.seoCanonicalUrl.isNotEmpty ? other.seoCanonicalUrl : null,
       heroTitle: other.heroTitle.isNotEmpty ? other.heroTitle : null,
       heroHighlight: other.heroHighlight.isNotEmpty ? other.heroHighlight : null,
       heroParagraph: other.heroParagraph.isNotEmpty ? other.heroParagraph : null,
       ctaPrimary: other.ctaPrimary.isNotEmpty ? other.ctaPrimary : null,
       ctaSecondary: other.ctaSecondary.isNotEmpty ? other.ctaSecondary : null,
+      heroImageUrl: other.heroImageUrl ?? heroImageUrl,
+      heroImageAsset: other.heroImageAsset ?? heroImageAsset,
       impactQuote: other.impactQuote.isNotEmpty ? other.impactQuote : null,
       visionText: other.visionText.isNotEmpty ? other.visionText : null,
+      visionImageUrl: other.visionImageUrl ?? visionImageUrl,
+      visionImageAsset: other.visionImageAsset ?? visionImageAsset,
       consentText: other.consentText.isNotEmpty ? other.consentText : null,
       footerLegal: other.footerLegal.isNotEmpty ? other.footerLegal : null,
       features: other.features.isNotEmpty ? other.features : null,
@@ -245,6 +294,7 @@ class SiteContent {
       stats: other.stats.isNotEmpty ? other.stats : null,
       version: version + 1,
       lastUpdated: DateTime.now(),
+      updatedBy: other.updatedBy ?? updatedBy,
     );
   }
 
@@ -260,7 +310,7 @@ class SiteContent {
         .map((e) => Feature(
               title: _safeString(e['title'], defaultValue: '', maxLength: 90),
               text: _safeString(e['text'], defaultValue: '', maxLength: 420),
-              icon: _safeString(e['icon'], defaultValue: 'shield', maxLength: 60),
+              icon: _safeString(e['icon'], defaultValue: '', maxLength: 60),
               imageUrl: _safeUrl(e['image_url']),
               imageAsset: _safeString(e['image_asset'], defaultValue: null, maxLength: 200),
             ))
@@ -370,13 +420,20 @@ class SiteContent {
 
     return seoTitle == other.seoTitle &&
         seoDescription == other.seoDescription &&
+        seoKeywords == other.seoKeywords &&
+        seoOgImage == other.seoOgImage &&
+        seoCanonicalUrl == other.seoCanonicalUrl &&
         heroTitle == other.heroTitle &&
         heroHighlight == other.heroHighlight &&
         heroParagraph == other.heroParagraph &&
         ctaPrimary == other.ctaPrimary &&
         ctaSecondary == other.ctaSecondary &&
+        heroImageUrl == other.heroImageUrl &&
+        heroImageAsset == other.heroImageAsset &&
         impactQuote == other.impactQuote &&
         visionText == other.visionText &&
+        visionImageUrl == other.visionImageUrl &&
+        visionImageAsset == other.visionImageAsset &&
         consentText == other.consentText &&
         footerLegal == other.footerLegal &&
         version == other.version;
@@ -386,13 +443,20 @@ class SiteContent {
   int get hashCode => Object.hash(
         seoTitle,
         seoDescription,
+        seoKeywords,
+        seoOgImage,
+        seoCanonicalUrl,
         heroTitle,
         heroHighlight,
         heroParagraph,
         ctaPrimary,
         ctaSecondary,
+        heroImageUrl,
+        heroImageAsset,
         impactQuote,
         visionText,
+        visionImageUrl,
+        visionImageAsset,
         consentText,
         footerLegal,
         version,
@@ -410,7 +474,7 @@ class Feature {
   const Feature({
     this.title = '',
     this.text = '',
-    this.icon = 'shield',
+    this.icon = '',
     this.imageUrl,
     this.imageAsset,
   });

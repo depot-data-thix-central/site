@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_web_plugins/url_strategy.dart';
+import 'dart:ui_web' as ui_web;
 import 'package:web/web.dart' as web;
 import 'theme.dart';
 import 'security.dart';
@@ -9,7 +9,7 @@ import 'admin.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  usePathUrlStrategy(); // URLs propres : / et /admin
+  ui_web.usePathUrlStrategy();
   await Supabase.initialize(url: Env.supabaseUrl, publishableKey: Env.supabaseAnonKey);
   runApp(const SonathixApp());
   // Retire l'écran de chargement HTML après le 1er rendu

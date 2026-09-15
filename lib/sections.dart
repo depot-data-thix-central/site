@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart' hide Hero;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:web/web.dart' as web; // ← ajouté
 import 'theme.dart';
 import 'security.dart';
 import 'content.dart';
 
-IconData socialIconOf(String? key) => const {
+// ← Changé : retourne FaIconData
+FaIconData socialIconOf(String? key) => const {
       'linkedin': FontAwesomeIcons.linkedin,
       'x': FontAwesomeIcons.xTwitter,
       'youtube': FontAwesomeIcons.youtube,
@@ -54,9 +56,8 @@ class _PublicPageState extends State<PublicPage> {
     final seo = _ctrl.published?.seo;
     if (seo != null && seo.title.isNotEmpty) {
       try {
-        final doc = _getDocument();
-        doc.title = seo.title;
-        final meta = doc.querySelector('meta[name="description"]');
+        web.document.title = seo.title;
+        final meta = web.document.querySelector('meta[name="description"]');
         meta?.setAttribute('content', seo.description);
       } catch (_) {}
     }
@@ -139,15 +140,7 @@ class _PublicPageState extends State<PublicPage> {
   }
 }
 
-// Helper pour accéder au document web (compatible web/universal)
-dynamic _getDocument() {
-  try {
-    // ignore: avoid_web_libraries_in_flutter
-    return (const bool.fromEnvironment('dart.library.html')) ? (dynamic web) => web.document : null;
-  } catch (_) {
-    return null;
-  }
-}
+// ← Ancien helper cassé supprimé
 
 /// ═══════════ NAVBAR ═══════════
 class Navbar extends StatelessWidget {
@@ -998,7 +991,7 @@ class VisionSection extends StatelessWidget {
                   width: 300,
                   height: 300,
                   child: CustomPaint(
-                      painter: SunrisePainter(), size: const Size(300, 300))); // ← CONST AJOUTÉ ICI
+                      painter: SunrisePainter(), size: const Size(300, 300)));
               final middle = Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 36),
@@ -1298,7 +1291,8 @@ class _FooterState extends State<Footer> {
                           decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white.withValues(alpha: .25))),
-                          child: Icon(socialIconOf(s.icon), size: 13, color: Colors.white70)),
+                          // ← Changé : Icon → FaIcon
+                          child: FaIcon(socialIconOf(s.icon), size: 13, color: Colors.white70)),
                     ),
                   ),
                 ),

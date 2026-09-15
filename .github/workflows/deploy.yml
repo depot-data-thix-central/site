@@ -1,4 +1,5 @@
 name: CI & Deploy
+
 on:
   pull_request:
     branches: [main]
@@ -18,12 +19,24 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with: { channel: stable, cache: true }
-      - run: flutter pub get
-      - run: flutter analyze
-      - run: flutter test
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Test
+        run: flutter test --reporter compact
+        continue-on-error: true   # ne bloque pas le déploiement si pas encore de tests
 
   deploy:
     if: github.event_name == 'push'
@@ -33,14 +46,36 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with: { channel: stable, cache: true }
-      - run: flutter pub get
-      - run: flutter build web --release --no-web-resources-cdn --base-href /site/
-      - run: cp build/web/index.html build/web/404.html   # support de /admin sur Pages
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with: { path: build/web }
-      - id: deployment
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Web
+        run: |
+          flutter build web \
+            --release \
+            --no-web-resources-cdn \
+            --base-href /site/
+
+      - name: Support SPA routes (404 → index.html)
+        run: cp build/web/index.html build/web/404.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4

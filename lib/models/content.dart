@@ -92,30 +92,30 @@ class SiteContent {
       final meta = json['meta'] as Map<String, dynamic>? ?? {};
 
       return SiteContent(
-        seoTitle: _safeString(seo['title'], default: 'SONATHIX GROUP', maxLength: 80),
-        seoDescription: _safeString(seo['description'], default: '', maxLength: 200),
-        seoKeywords: _safeString(seo['keywords'], default: '', maxLength: 200),
-        seoOgImage: _safeString(seo['ogImage'], default: '', maxLength: 500),
-        seoCanonicalUrl: _safeString(seo['canonicalUrl'], default: '', maxLength: 500),
-        heroTitle: _safeString(hero['title_a'], default: 'Construire la confiance numérique de ', maxLength: 140),
-        heroHighlight: _safeString(hero['title_highlight'], default: 'demain.', maxLength: 80),
-        heroParagraph: _safeString(hero['paragraph'], default: '', maxLength: 600),
-        ctaPrimary: _safeString(hero['cta_primary'], default: 'Découvrir THIX ID', maxLength: 40),
-        ctaSecondary: _safeString(hero['cta_secondary'], default: 'Notre vision', maxLength: 40),
+        seoTitle: _safeString(seo['title'], defaultValue: 'SONATHIX GROUP', maxLength: 80),
+        seoDescription: _safeString(seo['description'], defaultValue: '', maxLength: 200),
+        seoKeywords: _safeString(seo['keywords'], defaultValue: '', maxLength: 200),
+        seoOgImage: _safeString(seo['ogImage'], defaultValue: '', maxLength: 500),
+        seoCanonicalUrl: _safeString(seo['canonicalUrl'], defaultValue: '', maxLength: 500),
+        heroTitle: _safeString(hero['title_a'], defaultValue: 'Construire la confiance numérique de ', maxLength: 140),
+        heroHighlight: _safeString(hero['title_highlight'], defaultValue: 'demain.', maxLength: 80),
+        heroParagraph: _safeString(hero['paragraph'], defaultValue: '', maxLength: 600),
+        ctaPrimary: _safeString(hero['cta_primary'], defaultValue: 'Découvrir THIX ID', maxLength: 40),
+        ctaSecondary: _safeString(hero['cta_secondary'], defaultValue: 'Notre vision', maxLength: 40),
         heroImageUrl: _safeUrl(hero['image_url']),
-        heroImageAsset: _safeString(hero['image_asset'], default: null, maxLength: 200),
+        heroImageAsset: _safeString(hero['image_asset'], defaultValue: null, maxLength: 200),
         features: _parseFeatures(json['features']),
         solutions: _parseSolutions(json['solutions']),
         stats: _parseStats(impact['stats']),
-        impactQuote: _safeString(impact['quote'], default: '', maxLength: 400),
-        visionText: _safeString(vision['text_bold'], default: '', maxLength: 1600),
+        impactQuote: _safeString(impact['quote'], defaultValue: '', maxLength: 400),
+        visionText: _safeString(vision['text_bold'], defaultValue: '', maxLength: 1600),
         visionImageUrl: _safeUrl(vision['image_url']),
-        visionImageAsset: _safeString(vision['image_asset'], default: null, maxLength: 200),
-        consentText: _safeString(consent['text'], default: '', maxLength: 600),
-        footerLegal: _safeString(footer['legal'], default: '© 2026 SONATHIX GROUP', maxLength: 1200),
+        visionImageAsset: _safeString(vision['image_asset'], defaultValue: null, maxLength: 200),
+        consentText: _safeString(consent['text'], defaultValue: '', maxLength: 600),
+        footerLegal: _safeString(footer['legal'], defaultValue: '© 2026 SONATHIX GROUP', maxLength: 1200),
         version: meta['version'] is int ? meta['version'] as int : 1,
         lastUpdated: meta['lastUpdated'] is String ? DateTime.tryParse(meta['lastUpdated'] as String) : null,
-        updatedBy: _safeString(meta['updatedBy'], default: null, maxLength: 100),
+        updatedBy: _safeString(meta['updatedBy'], defaultValue: null, maxLength: 100),
       );
     } catch (e) {
       // En cas d'erreur de parsing, retourner vide
@@ -258,11 +258,11 @@ class SiteContent {
     final parsed = list
         .whereType<Map>()
         .map((e) => Feature(
-              title: _safeString(e['title'], default: '', maxLength: 90),
-              text: _safeString(e['text'], default: '', maxLength: 420),
-              icon: _safeString(e['icon'], default: 'shield', maxLength: 60),
+              title: _safeString(e['title'], defaultValue: '', maxLength: 90),
+              text: _safeString(e['text'], defaultValue: '', maxLength: 420),
+              icon: _safeString(e['icon'], defaultValue: 'shield', maxLength: 60),
               imageUrl: _safeUrl(e['image_url']),
-              imageAsset: _safeString(e['image_asset'], default: null, maxLength: 200),
+              imageAsset: _safeString(e['image_asset'], defaultValue: null, maxLength: 200),
             ))
         .toList();
 
@@ -277,12 +277,12 @@ class SiteContent {
     final parsed = main
         .whereType<Map>()
         .map((e) => Solution(
-              title: _safeString(e['title'], default: '', maxLength: 90),
-              subtitle: _safeString(e['subtitle'], default: '', maxLength: 130),
-              text: _safeString(e['text'], default: '', maxLength: 420),
+              title: _safeString(e['title'], defaultValue: '', maxLength: 90),
+              subtitle: _safeString(e['subtitle'], defaultValue: '', maxLength: 130),
+              text: _safeString(e['text'], defaultValue: '', maxLength: 420),
               featured: e['featured'] == true,
               imageUrl: _safeUrl(e['image_url']),
-              imageAsset: _safeString(e['image_asset'], default: null, maxLength: 200),
+              imageAsset: _safeString(e['image_asset'], defaultValue: null, maxLength: 200),
             ))
         .toList();
 
@@ -295,8 +295,8 @@ class SiteContent {
     final parsed = list
         .whereType<Map>()
         .map((e) => Stat(
-              value: _safeString(e['value'], default: '', maxLength: 24),
-              label: _safeString(e['label'], default: '', maxLength: 80),
+              value: _safeString(e['value'], defaultValue: '', maxLength: 24),
+              label: _safeString(e['label'], defaultValue: '', maxLength: 80),
             ))
         .toList();
 
@@ -309,10 +309,10 @@ class SiteContent {
 
   static String _safeString(
     dynamic value, {
-    required String? default,
+    String? defaultValue,
     int maxLength = 4000,
   }) {
-    if (value == null) return default ?? '';
+    if (value == null) return defaultValue ?? '';
 
     final str = value.toString();
 
@@ -325,7 +325,7 @@ class SiteContent {
         )
         .trim();
 
-    if (cleaned.isEmpty) return default ?? '';
+    if (cleaned.isEmpty) return defaultValue ?? '';
 
     return _truncateSafely(cleaned, maxLength);
   }

@@ -505,16 +505,6 @@ class _ContentSecurity {
     if (cleaned.length <= maxLength) return cleaned;
     return cleaned.substring(0, maxLength);
   }
-
-  
-    if (value == null || value.isEmpty) return false;
-
-    final uri = Uri.tryParse(value);
-    if (uri == null || !uri.hasScheme) return false;
-
-    if (uri.isScheme('https')) return true;
-    return allowHttp && uri.isScheme('http');
-  }
 }
 
 class _ConsentMemory {

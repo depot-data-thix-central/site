@@ -84,7 +84,7 @@ class _HeroSectionState extends State<HeroSection>
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.auto_awesome_rounded, size: 14, color: AppColors.gold),
-          const SizedBox(width: 6),
+           SizedBox(width: 6),
           Text(
             text,
             style: const TextStyle(

@@ -433,7 +433,7 @@ class SiteContent {
         version == other.version;
   }
 
-  @override
+    @override
   int get hashCode => Object.hash(
         seoTitle,
         seoDescription,
@@ -454,11 +454,14 @@ class SiteContent {
         managerName,
         managerMessage,
         managerPhotoUrl,
-        consentText,
-        footerLegal,
-        version,
+        Object.hash(
+          consentText,
+          footerLegal,
+          version,
+        ),
       );
-}
+
+
 
 /// Feature (caractéristique produit/service).
 @immutable

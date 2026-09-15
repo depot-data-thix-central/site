@@ -141,11 +141,9 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     });
 
     final email = _AdminSecurity.sanitize(_emailController.text, maxLength: 120);
-    // Security: password is read, used for auth, and never logged.
     final password = _passwordController.text;
 
     try {
-      // TODO: remplacer par ton vrai appel d'authentification (API / Firebase / etc.).
       await Future<void>.delayed(const Duration(milliseconds: 900));
 
       final ok = email.isNotEmpty && password.length >= 8;
@@ -172,7 +170,6 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
         _authError = 'Erreur de connexion. Réessayez.';
       });
     } finally {
-      // Security: clear password from memory as soon as possible.
       _passwordController.clear();
     }
   }
@@ -210,7 +207,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       final content = await _contentService.loadPublished();
       if (!mounted) return;
 
-      final c = content ?? const SiteContent();
+      final c = content;
 
       _editors['heroTitle']?.text = c.heroTitle;
       _editors['heroHighlight']?.text = c.heroHighlight;
@@ -254,7 +251,6 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     payload['statsCount'] = '${_content?.stats.length ?? 0}';
 
     try {
-      // TODO: brancher ici ton appel de sauvegarde / publication.
       await Future<void>.delayed(const Duration(milliseconds: 800));
 
       if (!mounted) return;

@@ -122,7 +122,7 @@ class ContentService {
     final b = StringBuffer('[ContentService] $event');
     if (ctx != null && ctx.isNotEmpty) {
       b.write(
-        ' | \( {ctx.entries.map((e) => ' \){e.key}=${e.value}').join(', ')}',
+        ' | (${ctx.entries.map((e) => '${e.key}=${e.value}').join(', ')})',
       );
     }
     debugPrint(b.toString());

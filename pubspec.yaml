@@ -22,3 +22,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Décommentez et ajustez si vous utilisez des images/assets locaux dans votre site
+  # assets:
+  #   - assets/images/
+  #   - assets/icons/

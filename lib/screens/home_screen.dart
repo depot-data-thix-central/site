@@ -898,7 +898,7 @@ class _CtaBand extends StatelessWidget {
   const _CtaBand({required this.content});
   final SiteContent content;
 
-  @style
+  @override
   Widget build(BuildContext context) {
     final cta = content.ctaPrimary.isNotEmpty ? content.ctaPrimary : 'Nous contacter';
 

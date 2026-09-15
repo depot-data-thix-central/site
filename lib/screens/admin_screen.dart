@@ -379,14 +379,14 @@ class _AdminScreenState extends State<AdminScreen> {
         ),
         child: Scaffold(
           backgroundColor: _A.bg,
-          body: _authenticated ? _shell() : _login(),
+          body: _authenticated ? _shell() : _buildLogin(),
         ),
       ),
     );
   }
 
   // Login
-  Widget _login() {
+  Widget _buildLogin() { 
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),

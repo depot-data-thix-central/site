@@ -129,7 +129,7 @@ class _ImpactSectionState extends State<ImpactSection>
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
+        const Icon(
           Icons.format_quote_rounded,
           color: AppColors.gold,
           size: 44,

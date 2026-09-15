@@ -1,0 +1,104 @@
+{
+  "seo": {
+    "title": "SONATHIX GROUP — Construire la confiance numérique de demain",
+    "description": "SONATHIX GROUP développe des solutions technologiques souveraines et sécurisées (THIX ID, THIX IA, THIX ED) pour une Afrique plus connectée, sécurisée et innovante."
+  },
+  "nav": {
+    "cta_label": "Nous contacter",
+    "links": [
+      {"label": "Accueil", "target": "home"},
+      {"label": "À propos", "target": "about"},
+      {"label": "Nos solutions", "target": "solutions"},
+      {"label": "Impact", "target": "impact"},
+      {"label": "Actualités", "target": "actualites"},
+      {"label": "Contact", "target": "contact"}
+    ]
+  },
+  "hero": {
+    "eyebrow": ["TECHNOLOGIE", "INNOVATION", "AFRIQUE"],
+    "title_a": "Construire la confiance\nnumérique de ",
+    "title_highlight": "demain.",
+    "paragraph": "SONATHIX GROUP développe des solutions technologiques pour une Afrique plus connectée, sécurisée et innovante.",
+    "cta_primary": "Découvrir THIX ID",
+    "cta_secondary": "Notre vision",
+    "badge_title": "THIX ID",
+    "badge_text": "L'IDENTITÉ NUMÉRIQUE\nSÉCURISÉE POUR TOUS",
+    "card": {
+      "brand": "THIX ID", "nom_label": "NOM", "name": "LUMINA Nathan",
+      "id_label": "ID : THIX-CO-0428-MSN/6", "status": "Validé", "nfc": "NFC"
+    }
+  },
+  "features": [
+    {"icon": "shield", "title": "Identité vérifiée", "text": "Une identité numérique fiable et sécurisée."},
+    {"icon": "doc", "title": "Documents sécurisés", "text": "Diplômes, certifications, attestations… accessibles et vérifiables."},
+    {"icon": "hub", "title": "Confiance numérique", "text": "Pour les particuliers, les entreprises et les institutions."}
+  ],
+  "solutions": {
+    "label": "Nos solutions",
+    "title": "Des solutions innovantes pour un écosystème plus fort.",
+    "paragraph": "SONATHIX GROUP regroupe des solutions technologiques et digitales pour accompagner la transformation numérique de l'Afrique.",
+    "cta": "Découvrir toutes nos solutions",
+    "link_label": "En savoir plus",
+    "main": [
+      {"icon": "fingerprint", "title": "THIX ID", "subtitle": "Identité numérique sécurisée",
+       "text": "Une plateforme d'identité digitale pour tous : citoyens, étudiants, professionnels et entreprises.", "featured": true},
+      {"icon": "ai", "title": "THIX IA", "subtitle": "Assistant IA pour les projets",
+       "text": "Des outils d'intelligence artificielle pour les entreprises, la recherche, l'éducation et l'innovation.", "featured": false},
+      {"icon": "school", "title": "THIX ED", "subtitle": "Éducation numérique",
+       "text": "Des solutions pour une éducation accessible, connectée et orientée vers l'avenir.", "featured": false}
+    ],
+    "minis": [
+      {"icon": "wifi", "title": "THIX CONNECT", "subtitle": "Internet & connectivité"},
+      {"icon": "care", "title": "THIX CARE", "subtitle": "Santé & bien-être"},
+      {"icon": "food", "title": "USTAWI FOOD", "subtitle": "Agroalimentaire & nutrition"},
+      {"icon": "group", "title": "SONATHIX GROUP", "subtitle": "Investissements & projets"}
+    ]
+  },
+  "impact": {
+    "label": "Notre impact",
+    "title": "Une technologie utile,\npour un réel changement.",
+    "paragraph": "Nous croyons en une Afrique où chaque talent est identifié, chaque opportunité est accessible et chaque innovation crée de la valeur.",
+    "cta": "Voir notre impact",
+    "stats": [
+      {"value": "+1M", "label": "Personnes visées\navec THIX ID"},
+      {"value": "+50", "label": "Partenariats stratégiques\nen cours"},
+      {"value": "+6", "label": "Pays ciblés\nen Afrique"},
+      {"value": "+10", "label": "Solutions technologiques\nen développement"}
+    ],
+    "quote": "Une Afrique\nplus connectée,\nplus forte, plus libre."
+  },
+  "vision": {
+    "label": "Pour demain",
+    "title": "L'innovation au service\nde l'Afrique.",
+    "text_before": "Notre ambition est simple : ",
+    "text_bold": "mettre la technologie au service",
+    "text_after": " des hommes et des territoires, pour bâtir une Afrique souveraine, connectée et prospère.",
+    "cta": "Rejoindre notre mission",
+    "values": [
+      {"icon": "bulb", "title": "Innovation", "text": "Des solutions adaptées aux réalités africaines."},
+      {"icon": "social", "title": "Impact social", "text": "Des opportunités pour tous, partout."},
+      {"icon": "leaf", "title": "Durabilité", "text": "Une croissance responsable et inclusive."},
+      {"icon": "award", "title": "Excellence", "text": "Des standards internationaux, une vision locale."}
+    ]
+  },
+  "footer": {
+    "tagline": "Technologie  •  Innovation  •  Afrique",
+    "nav_title": "Navigation",
+    "social_title": "Suivez-nous",
+    "newsletter_title": "Newsletter",
+    "newsletter_text": "Restez informé de nos actualités et innovations.",
+    "newsletter_placeholder": "Votre adresse e-mail",
+    "privacy_note": "En vous inscrivant, vous acceptez notre politique de confidentialité. Aucun partage de données à des tiers.",
+    "legal": "© 2026 SONATHIX GROUP. Tous droits réservés.",
+    "signature": "Construire ensemble une Afrique numérique.",
+    "socials": [
+      {"icon": "linkedin", "url": "https://www.linkedin.com/company/sonathix"},
+      {"icon": "x", "url": "https://x.com/sonathix"},
+      {"icon": "youtube", "url": "https://www.youtube.com/@sonathix"},
+      {"icon": "telegram", "url": "https://t.me/sonathix"}
+    ]
+  },
+  "consent": {
+    "text": "Nous n'utilisons aucun cookie publicitaire ni traceur tiers. Un stockage local strictement nécessaire peut être utilisé pour mémoriser vos préférences. Votre choix est modifiable à tout moment."
+  }
+}

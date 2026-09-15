@@ -36,6 +36,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final _showBackToTop = ValueNotifier(false);
   final _consentVisible = ValueNotifier(false);
 
+  // Clés globales pour le défilement fluide vers les sections
+  final sectionKeys = List.generate(7, (_) => GlobalKey());
+
   SiteContent? _content;
   bool _loading = true;
   Object? _error;
@@ -178,6 +181,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     await _scroll.animateTo(0, duration: const Duration(milliseconds: 600), curve: Curves.easeOutCubic);
   }
 
+  void scrollToSection(int index) {
+    final context = sectionKeys[index].currentContext;
+    if (context != null) {
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOutCubic,
+      );
+    }
+  }
+
   void _snack(String msg, VoidCallback retry) {
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
@@ -246,14 +260,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _sec(0, _Navbar(content: c)),
-                  _sec(1, _Hero(content: c)),
-                  _sec(2, _About(content: c)),
-                  _sec(3, _Solutions(content: c)),
-                  _sec(4, _ProductHighlight(content: c)),
-                  _sec(5, _Impact(content: c)),
-                  _sec(6, _News(content: c)),
-                  _sec(7, _CtaBand(content: c)),
+                  _sec(0, KeyedSubtree(key: sectionKeys[0], child: _Navbar(content: c, onNavTap: scrollToSection))),
+                  _sec(1, KeyedSubtree(key: sectionKeys[1], child: _Hero(content: c, onCtaTap: () => scrollToSection(2)))),
+                  _sec(2, KeyedSubtree(key: sectionKeys[2], child: _About(content: c))),
+                  _sec(3, KeyedSubtree(key: sectionKeys[3], child: _Solutions(content: c))),
+                  _sec(4, _ManagerSection(content: c)),
+                  _sec(5, KeyedSubtree(key: sectionKeys[4], child: _ProductHighlight(content: c))),
+                  _sec(6, KeyedSubtree(key: sectionKeys[5], child: _Impact(content: c))),
+                  _sec(7, KeyedSubtree(key: sectionKeys[6], child: _CtaBand(content: c))),
                   _sec(8, _Footer(content: c)),
                 ],
               ),
@@ -316,8 +330,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 // ═══════════════════════════════════════════════════════════════
 
 class _Navbar extends StatelessWidget {
-  const _Navbar({required this.content});
+  const _Navbar({required this.content, required this.onNavTap});
   final SiteContent content;
+  final ValueChanged<int> onNavTap;
 
   @override
   Widget build(BuildContext context) {
@@ -354,14 +369,14 @@ class _Navbar extends StatelessWidget {
                   fontSize: 15)),
           const Spacer(),
           if (!compact) ...[
-            const _NavLink(label: 'Accueil'),
-            const _NavLink(label: 'Solutions'),
-            const _NavLink(label: 'Impact'),
-            const _NavLink(label: 'Actualités'),
+            _NavLink(label: 'Accueil', onTap: () => onNavTap(1)),
+            _NavLink(label: 'À propos', onTap: () => onNavTap(2)),
+            _NavLink(label: 'Solutions', onTap: () => onNavTap(3)),
+            _NavLink(label: 'Impact', onTap: () => onNavTap(5)),
             const SizedBox(width: 12),
           ],
           FilledButton(
-            onPressed: () {},
+            onPressed: () => onNavTap(6),
             style: FilledButton.styleFrom(
               backgroundColor: _H.ink,
               foregroundColor: Colors.white,
@@ -377,15 +392,16 @@ class _Navbar extends StatelessWidget {
 }
 
 class _NavLink extends StatelessWidget {
-  const _NavLink({required this.label});
+  const _NavLink({required this.label, required this.onTap});
   final String label;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: TextButton(
-        onPressed: () {},
+        onPressed: onTap,
         style: TextButton.styleFrom(foregroundColor: const Color(0xFF334155)),
         child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
       ),
@@ -395,8 +411,9 @@ class _NavLink extends StatelessWidget {
 
 // ── Hero ───────────────────────────────────────────────────────
 class _Hero extends StatelessWidget {
-  const _Hero({required this.content});
+  const _Hero({required this.content, required this.onCtaTap});
   final SiteContent content;
+  final VoidCallback onCtaTap;
 
   @override
   Widget build(BuildContext context) {
@@ -406,85 +423,106 @@ class _Hero extends StatelessWidget {
     final highlight = content.heroHighlight;
     final paragraph = content.heroParagraph;
     final cta1 = content.ctaPrimary.isNotEmpty ? content.ctaPrimary : 'À propos du Groupe';
-    final cta2 = content.ctaSecondary;
+    final heroImage = content.heroImageUrl;
+
+    final width = MediaQuery.sizeOf(context).width;
+    final isDesktop = width >= 900;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 64, 24, 56),
+      padding: EdgeInsets.symmetric(vertical: isDesktop ? 80 : 48, horizontal: 24),
       color: Colors.white,
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 900),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          constraints: const BoxConstraints(maxWidth: 1100),
+          child: Flex(
+            direction: isDesktop ? Axis.horizontal : Axis.vertical,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Text(
-                'TECHNOLOGIE  •  INNOVATION  •  AFRIQUE',
-                style: TextStyle(
-                  color: _H.muted,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 2,
-                ),
-              ),
-              const SizedBox(height: 20),
-              RichText(
-                text: TextSpan(
-                  style: const TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.w800,
-                    height: 1.15,
-                    color: _H.ink,
-                    letterSpacing: -0.8,
-                  ),
+              Expanded(
+                flex: isDesktop ? 6 : 0,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextSpan(text: title),
-                    if (highlight.isNotEmpty)
-                      TextSpan(
-                        text: highlight,
-                        style: const TextStyle(color: _H.ink),
+                    const Text(
+                      'TECHNOLOGIE  •  INNOVATION  •  AFRIQUE',
+                      style: TextStyle(
+                        color: _H.muted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 2,
                       ),
+                    ),
+                    const SizedBox(height: 20),
+                    RichText(
+                      text: TextSpan(
+                        style: TextStyle(
+                          fontSize: isDesktop ? 42 : 32,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15,
+                          color: _H.ink,
+                          letterSpacing: -0.8,
+                        ),
+                        children: [
+                          TextSpan(text: title),
+                          if (highlight.isNotEmpty)
+                            TextSpan(
+                              text: ' $highlight',
+                              style: const TextStyle(color: _H.ink),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (paragraph.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      Text(
+                        paragraph,
+                        style: const TextStyle(fontSize: 16, height: 1.6, color: _H.muted),
+                      ),
+                    ],
+                    const SizedBox(height: 28),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        FilledButton(
+                          onPressed: onCtaTap,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _H.ink,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                          ),
+                          child: Text(cta1),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              if (paragraph.isNotEmpty) ...[
-                const SizedBox(height: 18),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 560),
-                  child: Text(
-                    paragraph,
-                    style: const TextStyle(fontSize: 16, height: 1.6, color: _H.muted),
+              if (heroImage != null && heroImage.isNotEmpty) ...[
+                SizedBox(width: isDesktop ? 48 : 0, height: isDesktop ? 0 : 32),
+                Expanded(
+                  flex: isDesktop ? 5 : 0,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: _H.border),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Image.network(
+                        heroImage,
+                        fit: BoxFit.cover,
+                        height: isDesktop ? 380 : 260,
+                        width: double.infinity,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
+                    ),
                   ),
                 ),
               ],
-              const SizedBox(height: 28),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  FilledButton(
-                    onPressed: () {},
-                    style: FilledButton.styleFrom(
-                      backgroundColor: _H.ink,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-                    ),
-                    child: Text(cta1),
-                  ),
-                  if (cta2.isNotEmpty)
-                    OutlinedButton(
-                      onPressed: () {},
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _H.ink,
-                        side: const BorderSide(color: _H.lightBorder),
-                        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-                      ),
-                      child: Text(cta2),
-                    ),
-                ],
-              ),
             ],
           ),
         ),
@@ -501,36 +539,84 @@ class _About extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vision = content.visionText;
+    final visionImage = content.visionImageUrl;
     final features = content.features;
+    final width = MediaQuery.sizeOf(context).width;
+    final isDesktop = width >= 900;
 
     return Container(
       width: double.infinity,
       color: _H.surface,
-      padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 64, horizontal: 24),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1000),
+          constraints: const BoxConstraints(maxWidth: 1100),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Une vision.  Des solutions.  Un impact.',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: _H.ink,
-                  height: 1.25,
-                ),
+              Flex(
+                direction: isDesktop ? Axis.horizontal : Axis.vertical,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    flex: isDesktop ? 6 : 0,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'NOTRE VISION',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: _H.muted,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Une vision. Des solutions. Un impact.',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            color: _H.ink,
+                            height: 1.25,
+                          ),
+                        ),
+                        if (vision.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          Text(
+                            vision,
+                            style: const TextStyle(fontSize: 15, height: 1.65, color: _H.muted),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (visionImage != null && visionImage.isNotEmpty) ...[
+                    SizedBox(width: isDesktop ? 48 : 0, height: isDesktop ? 0 : 24),
+                    Expanded(
+                      flex: isDesktop ? 5 : 0,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.network(
+                          visionImage,
+                          height: 280,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              if (vision.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Text(
-                  vision,
-                  style: const TextStyle(fontSize: 15, height: 1.65, color: _H.muted),
-                ),
-              ],
               if (features.isNotEmpty) ...[
-                const SizedBox(height: 36),
+                const SizedBox(height: 48),
+                const Text(
+                  'Piliers stratégiques',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _H.ink),
+                ),
+                const SizedBox(height: 20),
                 LayoutBuilder(
                   builder: (context, c) {
                     final cols = c.maxWidth > 800 ? 3 : (c.maxWidth > 520 ? 2 : 1);
@@ -540,7 +626,7 @@ class _About extends StatelessWidget {
                       children: features.map((f) {
                         return SizedBox(
                           width: cols == 1 ? c.maxWidth : (c.maxWidth - 20 * (cols - 1)) / cols,
-                          child: _PillarCard(title: f.title, text: f.text),
+                          child: _PillarCard(title: f.title, text: f.text, imageUrl: f.imageUrl),
                         );
                       }).toList(),
                     );
@@ -556,14 +642,14 @@ class _About extends StatelessWidget {
 }
 
 class _PillarCard extends StatelessWidget {
-  const _PillarCard({required this.title, required this.text});
+  const _PillarCard({required this.title, required this.text, this.imageUrl});
   final String title;
   final String text;
+  final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -572,13 +658,32 @@ class _PillarCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w800, color: _H.ink)),
-          if (text.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(text, style: const TextStyle(fontSize: 13, height: 1.55, color: _H.muted)),
-          ],
+          if (imageUrl != null && imageUrl!.isNotEmpty)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+              child: Image.network(
+                imageUrl!,
+                height: 140,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w800, color: _H.ink)),
+                if (text.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(text, style: const TextStyle(fontSize: 13, height: 1.55, color: _H.muted)),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -598,7 +703,7 @@ class _Solutions extends StatelessWidget {
     return Container(
       width: double.infinity,
       color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 64, horizontal: 24),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1100),
@@ -606,7 +711,7 @@ class _Solutions extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Nos Solutions',
+                'NOS SOLUTIONS',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -624,14 +729,14 @@ class _Solutions extends StatelessWidget {
                   height: 1.25,
                 ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 32),
               LayoutBuilder(
                 builder: (context, c) {
-                  final cols = c.maxWidth > 900 ? 4 : (c.maxWidth > 600 ? 2 : 1);
-                  final w = cols == 1 ? c.maxWidth : (c.maxWidth - 16 * (cols - 1)) / cols;
+                  final cols = c.maxWidth > 900 ? 3 : (c.maxWidth > 600 ? 2 : 1);
+                  final w = cols == 1 ? c.maxWidth : (c.maxWidth - 20 * (cols - 1)) / cols;
                   return Wrap(
-                    spacing: 16,
-                    runSpacing: 16,
+                    spacing: 20,
+                    runSpacing: 20,
                     children: list.map((s) {
                       return SizedBox(
                         width: w,
@@ -640,6 +745,7 @@ class _Solutions extends StatelessWidget {
                           subtitle: s.subtitle,
                           text: s.text,
                           featured: s.featured,
+                          imageUrl: s.imageUrl,
                         ),
                       );
                     }).toList(),
@@ -660,16 +766,17 @@ class _SolutionCard extends StatelessWidget {
     required this.subtitle,
     required this.text,
     this.featured = false,
+    this.imageUrl,
   });
   final String title;
   final String subtitle;
   final String text;
   final bool featured;
+  final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: featured ? _H.ink : _H.surface,
         borderRadius: BorderRadius.circular(16),
@@ -680,37 +787,139 @@ class _SolutionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: featured ? Colors.white : _H.ink,
+          if (imageUrl != null && imageUrl!.isNotEmpty)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+              child: Image.network(
+                imageUrl!,
+                height: 160,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: featured ? Colors.white : _H.ink,
+                  ),
+                ),
+                if (subtitle.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: featured ? _H.subtext : _H.muted,
+                    ),
+                  ),
+                ],
+                if (text.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    text,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: featured ? _H.lightBorder : _H.muted,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          if (subtitle.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: featured ? _H.subtext : _H.muted,
-              ),
-            ),
-          ],
-          if (text.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(
-              text,
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.5,
-                color: featured ? _H.lightBorder : _H.muted,
-              ),
-            ),
-          ],
         ],
+      ),
+    );
+  }
+}
+
+// ── Mot du Manager ─────────────────────────────────────────────
+class _ManagerSection extends StatelessWidget {
+  const _ManagerSection({required this.content});
+  final SiteContent content;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = content.managerName;
+    final message = content.managerMessage;
+    final photoUrl = content.managerPhotoUrl;
+
+    if ((name == null || name.isEmpty) && (message == null || message.isEmpty)) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      width: double.infinity,
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 64, horizontal: 24),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 850),
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: _H.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: _H.border),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (photoUrl != null && photoUrl.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(100),
+                    child: Image.network(
+                      photoUrl,
+                      width: 90,
+                      height: 90,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 50, color: _H.muted),
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'MOT DU DIRECTION',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: _H.muted,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      if (message != null && message.isNotEmpty)
+                        Text(
+                          '"$message"',
+                          style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic, height: 1.6, color: _H.ink),
+                        ),
+                      if (name != null && name.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          name,
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: _H.ink),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -736,7 +945,7 @@ class _ProductHighlight extends StatelessWidget {
     return Container(
       width: double.infinity,
       color: _H.ink,
-      padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 64, horizontal: 24),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 800),
@@ -804,15 +1013,15 @@ class _Impact extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
+      color: _H.surface,
+      padding: const EdgeInsets.symmetric(vertical: 64, horizontal: 24),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1000),
           child: Column(
             children: [
               const Text(
-                'Notre Impact',
+                'NOTRE IMPACT',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -882,18 +1091,7 @@ class _Impact extends StatelessWidget {
   }
 }
 
-// ── Actualités ──────────────────────────────────────────────────
-class _News extends StatelessWidget {
-  const _News({required this.content});
-  final SiteContent content;
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
-  }
-}
-
-// ── CTA final ──────────────────────────────────────────────────
+// ── CTA final ────────────────────────────────________________  
 class _CtaBand extends StatelessWidget {
   const _CtaBand({required this.content});
   final SiteContent content;
@@ -904,8 +1102,8 @@ class _CtaBand extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      color: _H.surface,
-      padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 64, horizontal: 24),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 640),

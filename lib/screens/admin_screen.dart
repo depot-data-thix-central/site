@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 
 import '../models/content.dart';
 import '../services/content_service.dart';
-import '../theme.dart';
 
 // ---------------------------------------------------------------------------
 // MODEL
@@ -944,7 +943,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   }
 
   String _formatDate(DateTime dt) {
-    final pad = (int n) => n.toString().padLeft(2, '0');
+    String pad(int n) => n.toString().padLeft(2, '0');
     return '${pad(dt.day)}/${pad(dt.month)}/${dt.year} '
         '${pad(dt.hour)}:${pad(dt.minute)}';
   }

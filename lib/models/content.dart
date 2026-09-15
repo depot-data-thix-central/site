@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 /// - Validation de longueur et sanitization des caractères dangereux
 /// - Serialization JSON complète (from/to)
 /// - Méthodes copyWith() et merge() pour édition admin
-/// - Support images (URL + asset) pour features/solutions/hero
+/// - Support images (URL + asset) pour features/solutions/hero/manager/vision
 /// - SEO enrichi (OG tags, canonical, etc.)
 /// - Métadonnées admin (version, lastUpdated)
 /// - Aucun contenu métier hardcodé
@@ -40,6 +40,11 @@ class SiteContent {
   final String? visionImageUrl;
   final String? visionImageAsset;
 
+  // Manager / Direction
+  final String managerName;
+  final String managerMessage;
+  final String? managerPhotoUrl;
+
   // Consent & Footer
   final String consentText;
   final String footerLegal;
@@ -69,6 +74,9 @@ class SiteContent {
     this.visionText = '',
     this.visionImageUrl,
     this.visionImageAsset,
+    this.managerName = '',
+    this.managerMessage = '',
+    this.managerPhotoUrl,
     this.consentText = '',
     this.footerLegal = '',
     this.version = 1,
@@ -98,6 +106,7 @@ class SiteContent {
       final hero = json['hero'] as Map<String, dynamic>? ?? {};
       final impact = json['impact'] as Map<String, dynamic>? ?? {};
       final vision = json['vision'] as Map<String, dynamic>? ?? {};
+      final manager = json['manager'] as Map<String, dynamic>? ?? {};
       final footer = json['footer'] as Map<String, dynamic>? ?? {};
       final consent = json['consent'] as Map<String, dynamic>? ?? {};
       final meta = json['meta'] as Map<String, dynamic>? ?? {};
@@ -122,6 +131,9 @@ class SiteContent {
         visionText: _safeString(vision['text_bold'], defaultValue: '', maxLength: 1600),
         visionImageUrl: _safeUrl(vision['image_url']),
         visionImageAsset: _safeString(vision['image_asset'], defaultValue: null, maxLength: 200),
+        managerName: _safeString(manager['name'], defaultValue: '', maxLength: 100),
+        managerMessage: _safeString(manager['message'], defaultValue: '', maxLength: 600),
+        managerPhotoUrl: _safeUrl(manager['photo_url']),
         consentText: _safeString(consent['text'], defaultValue: '', maxLength: 600),
         footerLegal: _safeString(footer['legal'], defaultValue: '', maxLength: 1200),
         version: meta['version'] is int ? meta['version'] as int : 1,
@@ -165,6 +177,11 @@ class SiteContent {
         'image_url': visionImageUrl,
         'image_asset': visionImageAsset,
       },
+      'manager': {
+        'name': managerName,
+        'message': managerMessage,
+        'photo_url': managerPhotoUrl,
+      },
       'consent': {
         'text': consentText,
       },
@@ -200,6 +217,9 @@ class SiteContent {
     String? visionText,
     String? visionImageUrl,
     String? visionImageAsset,
+    String? managerName,
+    String? managerMessage,
+    String? managerPhotoUrl,
     String? consentText,
     String? footerLegal,
     int? version,
@@ -226,6 +246,9 @@ class SiteContent {
       visionText: visionText ?? this.visionText,
       visionImageUrl: visionImageUrl ?? this.visionImageUrl,
       visionImageAsset: visionImageAsset ?? this.visionImageAsset,
+      managerName: managerName ?? this.managerName,
+      managerMessage: managerMessage ?? this.managerMessage,
+      managerPhotoUrl: managerPhotoUrl ?? this.managerPhotoUrl,
       consentText: consentText ?? this.consentText,
       footerLegal: footerLegal ?? this.footerLegal,
       version: version ?? this.version,
@@ -253,6 +276,9 @@ class SiteContent {
       visionText: other.visionText.isNotEmpty ? other.visionText : null,
       visionImageUrl: other.visionImageUrl ?? visionImageUrl,
       visionImageAsset: other.visionImageAsset ?? visionImageAsset,
+      managerName: other.managerName.isNotEmpty ? other.managerName : null,
+      managerMessage: other.managerMessage.isNotEmpty ? other.managerMessage : null,
+      managerPhotoUrl: other.managerPhotoUrl ?? managerPhotoUrl,
       consentText: other.consentText.isNotEmpty ? other.consentText : null,
       footerLegal: other.footerLegal.isNotEmpty ? other.footerLegal : null,
       features: other.features.isNotEmpty ? other.features : null,
@@ -399,6 +425,9 @@ class SiteContent {
         visionText == other.visionText &&
         visionImageUrl == other.visionImageUrl &&
         visionImageAsset == other.visionImageAsset &&
+        managerName == other.managerName &&
+        managerMessage == other.managerMessage &&
+        managerPhotoUrl == other.managerPhotoUrl &&
         consentText == other.consentText &&
         footerLegal == other.footerLegal &&
         version == other.version;
@@ -422,6 +451,9 @@ class SiteContent {
         visionText,
         visionImageUrl,
         visionImageAsset,
+        managerName,
+        managerMessage,
+        managerPhotoUrl,
         consentText,
         footerLegal,
         version,

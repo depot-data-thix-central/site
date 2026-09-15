@@ -139,13 +139,18 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   @override
-  void dispose() {
-    _emailCtrl.dispose();
-    _passwordCtrl.dispose();
-    for (final c in _text.values) c.dispose();
-    for (final c in _images.values) c.dispose();
-    super.dispose();
+void dispose() {
+  _emailCtrl.dispose();
+  _passwordCtrl.dispose();
+  for (final c in _text.values) {
+    c.dispose();
   }
+  for (final c in _images.values) {
+    c.dispose();
+  }
+  super.dispose();
+}
+
 
   // ── Auth ─────────────────────────────────────────────────────
   Future<void> _checkExistingSession() async {
@@ -1242,7 +1247,7 @@ class _AdminScreenState extends State<AdminScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Image.network(
-                currentUrl!,
+                currentUrl, // <-- Suppression du '!' ici
                 height: 100,
                 width: 100,
                 fit: BoxFit.cover,
@@ -1254,6 +1259,7 @@ class _AdminScreenState extends State<AdminScreen> {
       ),
     );
   }
+
 
   Widget _inlineField(String label, String value, ValueChanged<String> onChanged, {int maxLines = 1}) {
     return Padding(

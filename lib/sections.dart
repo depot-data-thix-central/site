@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Hero;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:web/web.dart' as web;
 import 'theme.dart';
 import 'security.dart';
 import 'content.dart';
@@ -32,8 +31,7 @@ class _PublicPageState extends State<PublicPage> {
     _consent.load().then((c) { if (mounted) setState(() => _consentChoice = c); });
     _ctrl.addListener(_onContent);
     _ctrl.loadPublic();
-    WidgetsBinding.instance.addPostFrameCallback(
-        (_) => web.document.getElementById('loading')?.remove());
+    // NOTE : web.document.getElementById('loading')?.remove() est dans main.dart
   }
 
   @override
@@ -45,9 +43,13 @@ class _PublicPageState extends State<PublicPage> {
     setState(() {});
     final seo = _ctrl.published?.seo;
     if (seo != null && seo.title.isNotEmpty) {
-      web.document.title = seo.title;
-      web.document.querySelector('meta[name="description"]')
-          ?.setAttribute('content', seo.description);
+      // Note : sur web uniquement, ces appels fonctionnent
+      try {
+        final doc = _getDocument();
+        doc.title = seo.title;
+        final meta = doc.querySelector('meta[name="description"]');
+        meta?.setAttribute('content', seo.description);
+      } catch (_) {}
     }
   }
 
@@ -98,6 +100,18 @@ class _PublicPageState extends State<PublicPage> {
               })),
       ]),
     );
+  }
+}
+
+// Helper pour accéder au document web (compatible web/universal)
+dynamic _getDocument() {
+  try {
+    // ignore: avoid_web_libraries_in_flutter
+    return (const bool.fromEnvironment('dart.library.html')) 
+        ? (dynamic web) => web.document 
+        : null;
+  } catch (_) {
+    return null;
   }
 }
 
@@ -221,7 +235,7 @@ class HeroSection extends StatelessWidget {
     const SizedBox(height: 18),
     RichText(text: TextSpan(style: Theme.of(context).textTheme.displayLarge, children: [
       TextSpan(text: h.titleA),
-      TextSpan(text: h.titleHighlight, style: const TextStyle(color: AppColors.gold)),
+      TextSpan(text: h.highlight, style: const TextStyle(color: AppColors.gold)), // CORRECTION: highlight au lieu de titleHighlight
     ])),
     const SizedBox(height: 18),
     ConstrainedBox(constraints: const BoxConstraints(maxWidth: 430),

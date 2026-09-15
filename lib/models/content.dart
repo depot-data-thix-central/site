@@ -1,16 +1,6 @@
 import 'package:flutter/foundation.dart';
 
 /// Modèle complet du site.
-///
-/// Caractéristiques :
-/// - Immutabilité garantie (listes unmodifiable)
-/// - Validation de longueur et sanitization des caractères dangereux
-/// - Serialization JSON complète (from/to)
-/// - Méthodes copyWith() et merge() pour édition admin
-/// - Support images (URL + asset) pour features/solutions/hero/manager/vision
-/// - SEO enrichi (OG tags, canonical, etc.)
-/// - Métadonnées admin (version, lastUpdated)
-/// - Aucun contenu métier hardcodé
 @immutable
 class SiteContent {
   // SEO
@@ -84,20 +74,9 @@ class SiteContent {
     this.updatedBy,
   });
 
-  /// Instance vierge. Tout le contenu est géré via l'administration/backend.
-  factory SiteContent.empty() {
-    return const SiteContent();
-  }
+  factory SiteContent.empty() => const SiteContent();
+  factory SiteContent.demo() => const SiteContent();
 
-  /// Alias pour compatibilité de test, retourne une instance vierge sans texte en dur.
-  factory SiteContent.demo() {
-    return const SiteContent();
-  }
-
-  /// Crée une instance depuis un JSON.
-  ///
-  /// Sanitize automatiquement les textes et valide les longueurs.
-  /// Ne crash jamais : retourne une instance vide en cas d'erreur.
   factory SiteContent.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const SiteContent();
 
@@ -145,7 +124,6 @@ class SiteContent {
     }
   }
 
-  /// Sérialise en JSON pour sauvegarde backend/admin.
   Map<String, dynamic> toJson() {
     return {
       'seo': {
@@ -196,7 +174,6 @@ class SiteContent {
     };
   }
 
-  /// Crée une copie avec certains champs modifiés.
   SiteContent copyWith({
     String? seoTitle,
     String? seoDescription,
@@ -257,7 +234,6 @@ class SiteContent {
     );
   }
 
-  /// Fusionne avec un autre contenu (utile pour l'administration).
   SiteContent merge(SiteContent other) {
     return copyWith(
       seoTitle: other.seoTitle.isNotEmpty ? other.seoTitle : null,
@@ -290,13 +266,8 @@ class SiteContent {
     );
   }
 
-  // -------------------------------------------------------------------------
-  // PARSING HELPERS
-  // -------------------------------------------------------------------------
-
   static List<Feature> _parseFeatures(dynamic list) {
     if (list is! List) return const [];
-
     final parsed = list
         .whereType<Map>()
         .map((e) => Feature(
@@ -307,7 +278,6 @@ class SiteContent {
               imageAsset: _safeString(e['image_asset'], defaultValue: null, maxLength: 200),
             ))
         .toList();
-
     return List.unmodifiable(parsed);
   }
 
@@ -315,7 +285,6 @@ class SiteContent {
     if (data is! Map) return const [];
     final main = data['main'];
     if (main is! List) return const [];
-
     final parsed = main
         .whereType<Map>()
         .map((e) => Solution(
@@ -327,13 +296,11 @@ class SiteContent {
               imageAsset: _safeString(e['image_asset'], defaultValue: null, maxLength: 200),
             ))
         .toList();
-
     return List.unmodifiable(parsed);
   }
 
   static List<Stat> _parseStats(dynamic list) {
     if (list is! List) return const [];
-
     final parsed = list
         .whereType<Map>()
         .map((e) => Stat(
@@ -341,68 +308,36 @@ class SiteContent {
               label: _safeString(e['label'], defaultValue: '', maxLength: 80),
             ))
         .toList();
-
     return List.unmodifiable(parsed);
   }
 
-  // -------------------------------------------------------------------------
-  // SECURITY & SANITIZATION HELPERS
-  // -------------------------------------------------------------------------
-
-  static String _safeString(
-    dynamic value, {
-    String? defaultValue,
-    int maxLength = 4000,
-  }) {
+  static String _safeString(dynamic value, {String? defaultValue, int maxLength = 4000}) {
     if (value == null) return defaultValue ?? '';
-
     final str = value.toString();
-
-    final cleaned = str
-        .replaceAll(
-          RegExp(
-            r'[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFEFF\u202A-\u202E\u2066-\u2069]',
-          ),
-          '',
-        )
-        .trim();
-
+    final cleaned = str.replaceAll(RegExp(r'[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFEFF\u202A-\u202E\u2066-\u2069]'), '').trim();
     if (cleaned.isEmpty) return defaultValue ?? '';
-
     return _truncateSafely(cleaned, maxLength);
   }
 
   static String? _safeUrl(dynamic value) {
     if (value == null) return null;
-
     final str = value.toString().trim();
     if (str.isEmpty) return null;
-
     final uri = Uri.tryParse(str);
-    if (uri == null || !uri.hasScheme) return null;
-
-    if (!uri.isScheme('https')) return null;
-
+    if (uri == null || !uri.hasScheme || !uri.isScheme('https')) return null;
     return _truncateSafely(str, 500);
   }
 
   static String _truncateSafely(String value, int maxLength) {
     if (value.length <= maxLength) return value;
-
     final truncated = value.substring(0, maxLength);
     if (truncated.isEmpty) return '';
-
     final last = truncated.codeUnitAt(truncated.length - 1);
     if (last >= 0xD800 && last <= 0xDBFF) {
       return truncated.substring(0, truncated.length - 1);
     }
-
     return truncated;
   }
-
-  // -------------------------------------------------------------------------
-  // EQUALITY
-  // -------------------------------------------------------------------------
 
   @override
   bool operator ==(Object other) {
@@ -433,7 +368,7 @@ class SiteContent {
         version == other.version;
   }
 
-    @override
+  @override
   int get hashCode => Object.hash(
         seoTitle,
         seoDescription,
@@ -460,8 +395,11 @@ class SiteContent {
           version,
         ),
       );
+}
 
-
+// =========================================================================
+// CLASSES AUXILIAIRES (AU NIVEAU SUPÉRIEUR)
+// =========================================================================
 
 /// Feature (caractéristique produit/service).
 @immutable

@@ -49,7 +49,7 @@ Future<void> main() async {
     try {
       await Supabase.initialize(
         url: Env.supabaseUrl,
-        anonKey: Env.supabaseAnonKey,
+        publishableKey: Env.supabaseAnonKey,
       );
     } catch (e, st) {
       _reportError(e, st, source: 'Supabase.initialize');

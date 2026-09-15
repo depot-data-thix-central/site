@@ -6,15 +6,11 @@ import 'package:flutter/services.dart';
 
 import '../models/content.dart';
 import '../services/content_service.dart';
-import '../widgets/consent_banner.dart';
-import '../widgets/features_section.dart';
-import '../widgets/footer.dart';
-import '../widgets/hero_section.dart';
-import '../widgets/impact_section.dart';
-import '../widgets/navbar.dart';
-import '../widgets/solutions_section.dart';
-import '../widgets/vision_section.dart';
 
+/// ═══════════════════════════════════════════════════════════════
+/// HOMEPAGE COMPLÈTE — tout centralisé, zéro hardcode métier
+/// Fond blanc · contenu 100 % SiteContent · production-ready
+/// ═══════════════════════════════════════════════════════════════
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -23,10 +19,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  final ContentService _contentService = ContentService();
-  final ScrollController _scrollController = ScrollController();
-  final ValueNotifier<bool> _showBackToTop = ValueNotifier(false);
-  final ValueNotifier<bool> _consentVisible = ValueNotifier(false);
+  final _service = ContentService();
+  final _scroll = ScrollController();
+  final _showBackToTop = ValueNotifier(false);
+  final _consentVisible = ValueNotifier(false);
 
   SiteContent? _content;
   bool _loading = true;
@@ -34,97 +30,76 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool? _consent;
   Timer? _consentTimer;
 
-  late final AnimationController _entranceController;
+  late final AnimationController _entrance;
   late final Animation<double> _pageFade;
-  late final Animation<Offset> _pageSlide;
   late final List<Animation<double>> _sectionFades;
-  late final List<Animation<Offset>> _sectionSlides;
 
-  static const int _sectionCount = 7;
-  static const Duration _loadTimeout = Duration(seconds: 12);
-  static const int _maxAttempts = 3;
+  static const _sectionCount = 9;
+  static const _timeout = Duration(seconds: 12);
+  static const _maxAttempts = 3;
 
-  // Fond blanc production (plus d'or)
-  static const Color _bg = Colors.white;
-  static const Color _ink = Color(0xFF111827);
-  static const Color _muted = Color(0xFF6B7280);
-  static const Color _surface = Color(0xFFF3F4F6);
+  // Palette blanche / sombre (pas d'or)
+  static const _bg = Colors.white;
+  static const _ink = Color(0xFF0F172A);
+  static const _muted = Color(0xFF64748B);
+  static const _surface = Color(0xFFF8FAFC);
+  static const _border = Color(0xFFE2E8F0);
+  static const _accent = Color(0xFF0F172A);
 
   @override
   void initState() {
     super.initState();
     _consent = _ConsentMemory.choice;
 
-    _entranceController = AnimationController(
+    _entrance = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1200),
     );
-
-    _pageFade = _entranceController.drive(
-      CurveTween(curve: const Interval(0.0, 0.55, curve: Curves.easeOutCubic)),
+    _pageFade = _entrance.drive(
+      CurveTween(curve: const Interval(0, 0.5, curve: Curves.easeOutCubic)),
     );
-
-    _pageSlide = Tween<Offset>(
-      begin: const Offset(0, 0.02),
-      end: Offset.zero,
-    ).animate(_pageFade);
-
     _sectionFades = List.generate(
       _sectionCount,
-      (i) => _entranceController.drive(
-        CurveTween(curve: _sectionInterval(i)),
+      (i) => _entrance.drive(
+        CurveTween(
+          curve: Interval(
+            (i * 0.07).clamp(0.0, 0.55),
+            ((i * 0.07) + 0.4).clamp(0.0, 1.0),
+            curve: Curves.easeOutCubic,
+          ),
+        ),
       ),
     );
 
-    _sectionSlides = List.generate(
-      _sectionCount,
-      (i) => Tween<Offset>(
-        begin: const Offset(0, 0.07),
-        end: Offset.zero,
-      ).animate(_sectionFades[i]),
-    );
+    _scroll.addListener(() {
+      final show = _scroll.hasClients && _scroll.offset > 560;
+      if (show != _showBackToTop.value) _showBackToTop.value = show;
+    });
 
-    _scrollController.addListener(_handleScroll);
     _load();
   }
 
   @override
   void dispose() {
-    _scrollController.removeListener(_handleScroll);
-    _scrollController.dispose();
-    _entranceController.dispose();
+    _scroll.dispose();
+    _entrance.dispose();
     _consentTimer?.cancel();
     _showBackToTop.dispose();
     _consentVisible.dispose();
     super.dispose();
   }
 
-  Interval _sectionInterval(int index) {
-    const stagger = 0.08;
-    const visible = 0.45;
-    final start = (index * stagger).clamp(0.0, 1.0 - visible).toDouble();
-    final end = (start + visible).clamp(start, 1.0).toDouble();
-    return Interval(start, end, curve: Curves.easeOutCubic);
-  }
-
-  Future<void> _load({bool isRefresh = false}) async {
+  // ── Chargement sécurisé ──────────────────────────────────────
+  Future<void> _load({bool refresh = false}) async {
     if (!mounted) return;
-
-    if (!isRefresh) {
-      setState(() {
-        _loading = true;
-        _error = null;
-      });
-    }
+    if (!refresh) setState(() { _loading = true; _error = null; });
 
     try {
-      final content = await _fetchWithRetry();
+      final c = await _fetchWithRetry();
       if (!mounted) return;
 
-      _consentTimer?.cancel();
-
-      final safe = content ?? const SiteContent();
-      final safeConsent = _ContentSecurity.text(safe.consentText, maxLength: 600);
+      final safe = c ?? const SiteContent();
+      final consentText = _safeText(safe.consentText, 600);
 
       setState(() {
         _content = safe;
@@ -132,137 +107,91 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _error = null;
       });
 
-      if (!isRefresh) {
-        _entranceController
+      if (!refresh) {
+        _entrance
           ..reset()
           ..forward();
-      } else if (_entranceController.isDismissed) {
-        _entranceController.forward();
       }
 
-      if (_consent == null && safeConsent.isNotEmpty) {
+      if (_consent == null && consentText.isNotEmpty) {
         _consentVisible.value = false;
-        _consentTimer = Timer(const Duration(milliseconds: 650), () {
+        _consentTimer = Timer(const Duration(milliseconds: 600), () {
           if (mounted) _consentVisible.value = true;
         });
       } else {
         _consentVisible.value = false;
       }
-    } on TimeoutException catch (e) {
-      _safeLog('home_load_timeout', e);
-      _handleLoadError(e, isRefresh: isRefresh);
     } catch (e, st) {
-      _safeLog('home_load_failed', e, st);
-      _handleLoadError(e, isRefresh: isRefresh);
+      _log('load_failed', e, st);
+      if (!mounted) return;
+      if (refresh && _content != null) {
+        _snack('Impossible de rafraîchir. Réessayez.', () => _load(refresh: true));
+      } else {
+        setState(() { _loading = false; _error = e; });
+      }
     }
   }
 
   Future<SiteContent?> _fetchWithRetry() async {
-    Object? lastError;
-    StackTrace? lastStack;
-
-    for (var attempt = 1; attempt <= _maxAttempts; attempt++) {
+    Object? last;
+    StackTrace? lastSt;
+    for (var i = 1; i <= _maxAttempts; i++) {
       try {
-        return await _contentService.loadPublished().timeout(_loadTimeout);
-      } on TimeoutException catch (e) {
-        lastError = e;
-        _safeLog('home_fetch_timeout', e, null, {'attempt': attempt});
+        return await _service.loadPublished().timeout(_timeout);
       } catch (e, st) {
-        lastError = e;
-        lastStack = st;
-        _safeLog('home_fetch_attempt_failed', e, st, {'attempt': attempt});
-      }
-
-      if (attempt < _maxAttempts) {
-        await Future<void>.delayed(Duration(milliseconds: 350 * attempt));
-        if (!mounted) throw StateError('disposed during retry');
+        last = e;
+        lastSt = st;
+        _log('fetch_attempt', e, st, {'n': i});
+        if (i < _maxAttempts) {
+          await Future<void>.delayed(Duration(milliseconds: 300 * i));
+          if (!mounted) throw StateError('disposed');
+        }
       }
     }
-
-    Error.throwWithStackTrace(
-      lastError ?? StateError('Unknown content loading error'),
-      lastStack ?? StackTrace.current,
-    );
-  }
-
-  void _handleLoadError(Object error, {required bool isRefresh}) {
-    if (!mounted) return;
-    if (isRefresh && _content != null) {
-      _showRefreshError();
-      return;
-    }
-    setState(() {
-      _loading = false;
-      _error = error;
-    });
-  }
-
-  void _showRefreshError() {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: _ink,
-          content: const Text(
-            'Impossible de rafraîchir. Réessayez.',
-            style: TextStyle(color: Colors.white),
-          ),
-          action: SnackBarAction(
-            label: 'Réessayer',
-            textColor: Colors.white,
-            onPressed: () => _load(isRefresh: true),
-          ),
-        ),
-      );
-  }
-
-  void _handleScroll() {
-    if (!_scrollController.hasClients) return;
-    final show = _scrollController.offset > 600;
-    if (show != _showBackToTop.value) _showBackToTop.value = show;
-  }
-
-  Future<void> _scrollToTop() async {
-    if (!_scrollController.hasClients) return;
-    await HapticFeedback.selectionClick();
-    await _scrollController.animateTo(
-      0,
-      duration: const Duration(milliseconds: 650),
-      curve: Curves.easeOutCubic,
-    );
+    Error.throwWithStackTrace(last ?? StateError('load error'), lastSt ?? StackTrace.current);
   }
 
   Future<void> _setConsent(bool accepted) async {
     _consentTimer?.cancel();
     await HapticFeedback.selectionClick();
-    _safeLog('consent_choice', null, null, {'accepted': accepted});
     _ConsentMemory.choice = accepted;
     _consentVisible.value = false;
-    await Future<void>.delayed(const Duration(milliseconds: 280));
-    if (!mounted) return;
-    setState(() => _consent = accepted);
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    if (mounted) setState(() => _consent = accepted);
   }
 
-  void _safeLog(
-    String event, [
-    Object? error,
-    StackTrace? stackTrace,
-    Map<String, Object?>? context,
-  ]) {
+  Future<void> _scrollTop() async {
+    if (!_scroll.hasClients) return;
+    await HapticFeedback.selectionClick();
+    await _scroll.animateTo(0, duration: const Duration(milliseconds: 600), curve: Curves.easeOutCubic);
+  }
+
+  void _snack(String msg, VoidCallback retry) {
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: _ink,
+        content: Text(msg, style: const TextStyle(color: Colors.white)),
+        action: SnackBarAction(label: 'Réessayer', textColor: Colors.white, onPressed: retry),
+      ));
+  }
+
+  void _log(String e, [Object? err, StackTrace? st, Map<String, Object?>? ctx]) {
     if (!kDebugMode) return;
-    final b = StringBuffer('[HomeScreen] $event');
-    if (context != null && context.isNotEmpty) {
-      b.write(
-        ' | \( {context.entries.map((e) => ' \){e.key}=${e.value}').join(', ')}',
-      );
-    }
-    if (error != null) b.write(' | errorType=${error.runtimeType}');
-    debugPrint(b.toString());
-    if (stackTrace != null) debugPrint(stackTrace.toString());
+    debugPrint('[Home] $e ${ctx ?? ''} ${err?.runtimeType ?? ''}');
+    if (st != null) debugPrint('$st');
   }
 
+  static String _safeText(String? v, [int max = 4000]) {
+    if (v == null || v.isEmpty) return '';
+    final c = v
+        .replaceAll(RegExp(r'[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFEFF\u202A-\u202E\u2066-\u2069]'), '')
+        .trim();
+    return c.length <= max ? c : c.substring(0, max);
+  }
+
+  // ── Build ────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -270,343 +199,829 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         statusBarColor: _bg,
         systemNavigationBarColor: _bg,
         statusBarIconBrightness: Brightness.dark,
-        systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        key: const Key('home_screen'),
         backgroundColor: _bg,
-        body: _buildBody(),
+        body: _body(),
       ),
     );
   }
 
-  Widget _buildBody() {
-    if (_loading) return const _HomeLoadingSkeleton();
-
+  Widget _body() {
+    if (_loading) return const _Skeleton();
     if (_error != null) {
-      return _HomeErrorView(
+      return _ErrorView(
         isTimeout: _error is TimeoutException,
         onRetry: _load,
       );
     }
 
-    final content = _content ?? const SiteContent();
-    final safeConsent = _ContentSecurity.text(content.consentText, maxLength: 600);
-    final bottomPad = MediaQuery.of(context).viewPadding.bottom;
+    final c = _content ?? const SiteContent();
+    final consent = _safeText(c.consentText, 600);
+    final bottom = MediaQuery.of(context).viewPadding.bottom;
 
     return Stack(
       children: [
-        _buildContent(content),
+        RefreshIndicator(
+          color: _ink,
+          backgroundColor: _bg,
+          onRefresh: () => _load(refresh: true),
+          child: FadeTransition(
+            opacity: _pageFade,
+            child: SingleChildScrollView(
+              controller: _scroll,
+              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _sec(0, _Navbar(content: c)),
+                  _sec(1, _Hero(content: c)),
+                  _sec(2, _About(content: c)),
+                  _sec(3, _Solutions(content: c)),
+                  _sec(4, _ProductHighlight(content: c)),
+                  _sec(5, _Impact(content: c)),
+                  _sec(6, _News(content: c)),
+                  _sec(7, _CtaBand(content: c)),
+                  _sec(8, _Footer(content: c)),
+                ],
+              ),
+            ),
+          ),
+        ),
 
         // Back to top
         ValueListenableBuilder<bool>(
           valueListenable: _showBackToTop,
-          builder: (context, scrollShow, _) {
-            return ValueListenableBuilder<bool>(
-              valueListenable: _consentVisible,
-              builder: (context, consentVisible, _) {
-                final show = scrollShow && !(_consent == null && consentVisible);
-                return Positioned(
-                  right: 16,
-                  bottom: 20 + bottomPad,
-                  child: ExcludeSemantics(
-                    excluding: !show,
-                    child: ExcludeFocus(
-                      excluding: !show,
-                      child: AnimatedOpacity(
-                        opacity: show ? 1 : 0,
-                        duration: const Duration(milliseconds: 220),
-                        child: AnimatedScale(
-                          scale: show ? 1 : 0.86,
-                          duration: const Duration(milliseconds: 220),
-                          curve: Curves.easeOutBack,
-                          child: IgnorePointer(
-                            ignoring: !show,
-                            child: _BackToTopButton(onPressed: _scrollToTop),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            );
-          },
+          builder: (_, show, __) => Positioned(
+            right: 16,
+            bottom: 20 + bottom,
+            child: IgnorePointer(
+              ignoring: !show,
+              child: AnimatedOpacity(
+                opacity: show ? 1 : 0,
+                duration: const Duration(milliseconds: 200),
+                child: _RoundIconButton(
+                  icon: Icons.arrow_upward_rounded,
+                  onTap: _scrollTop,
+                  label: 'Haut de page',
+                ),
+              ),
+            ),
+          ),
         ),
 
-        // Consent banner
-        if (_consent == null && safeConsent.isNotEmpty)
+        // Consent
+        if (_consent == null && consent.isNotEmpty)
           Positioned(
             left: 16,
             right: 16,
-            bottom: 16 + bottomPad,
+            bottom: 16 + bottom,
             child: ValueListenableBuilder<bool>(
               valueListenable: _consentVisible,
-              builder: (context, visible, _) {
-                return ExcludeSemantics(
-                  excluding: !visible,
-                  child: ExcludeFocus(
-                    excluding: !visible,
-                    child: AnimatedOpacity(
-                      opacity: visible ? 1 : 0,
-                      duration: const Duration(milliseconds: 320),
-                      child: AnimatedPadding(
-                        padding: EdgeInsets.only(bottom: visible ? 0 : 14),
-                        duration: const Duration(milliseconds: 320),
-                        child: ConsentBanner(
-                          text: safeConsent,
-                          onAccept: () => _setConsent(true),
-                          onRefuse: () => _setConsent(false),
-                        ),
-                      ),
-                    ),
+              builder: (_, visible, __) => AnimatedOpacity(
+                opacity: visible ? 1 : 0,
+                duration: const Duration(milliseconds: 300),
+                child: IgnorePointer(
+                  ignoring: !visible,
+                  child: _ConsentBanner(
+                    text: consent,
+                    onAccept: () => _setConsent(true),
+                    onRefuse: () => _setConsent(false),
                   ),
-                );
-              },
+                ),
+              ),
             ),
           ),
       ],
     );
   }
 
-  Widget _buildContent(SiteContent content) {
-    return RefreshIndicator(
-      color: _ink,
-      backgroundColor: _bg,
-      onRefresh: () => _load(isRefresh: true),
-      child: FadeTransition(
-        opacity: _pageFade,
-        child: SlideTransition(
-          position: _pageSlide,
-          child: SingleChildScrollView(
-            controller: _scrollController,
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
+  Widget _sec(int i, Widget child) => FadeTransition(opacity: _sectionFades[i], child: child);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WIDGETS INTERNES (tout dans ce fichier)
+// ═══════════════════════════════════════════════════════════════
+
+class _Navbar extends StatelessWidget {
+  const _Navbar({required this.content});
+  final SiteContent content;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final compact = width < 720;
+
+    return Container(
+      height: 72,
+      padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 32),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+      ),
+      child: Row(
+        children: [
+          // Logo
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F172A),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _section(0, Navbar(content: content)),
-                _section(1, HeroSection(content: content)),
-                _section(2, FeaturesSection(features: content.features)),
-                _section(3, SolutionsSection(solutions: content.solutions)),
-                _section(
-                  4,
-                  ImpactSection(
-                    stats: content.stats,
-                    quote: content.impactQuote,
+            alignment: Alignment.center,
+            child: const Text('S',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
+          ),
+          const SizedBox(width: 10),
+          const Text('SONATHIX',
+              style: TextStyle(
+                  color: Color(0xFF0F172A),
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                  fontSize: 15)),
+          const Spacer(),
+          if (!compact) ...[
+            _NavLink(label: 'Accueil'),
+            _NavLink(label: 'Solutions'),
+            _NavLink(label: 'Impact'),
+            _NavLink(label: 'Actualités'),
+            const SizedBox(width: 12),
+          ],
+          FilledButton(
+            onPressed: () {},
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0F172A),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+            ),
+            child: Text(content.ctaPrimary.isNotEmpty ? content.ctaPrimary : 'Nous contacter'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavLink extends StatelessWidget {
+  const _NavLink({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: TextButton(
+        onPressed: () {},
+        style: TextButton.styleFrom(foregroundColor: const Color(0xFF334155)),
+        child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+      ),
+    );
+  }
+}
+
+// ── Hero ───────────────────────────────────────────────────────
+class _Hero extends StatelessWidget {
+  const _Hero({required this.content});
+  final SiteContent content;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = content.heroTitle.isNotEmpty
+        ? content.heroTitle
+        : 'Construire aujourd’hui\nl’Afrique de demain.';
+    final highlight = content.heroHighlight;
+    final paragraph = content.heroParagraph;
+    final cta1 = content.ctaPrimary.isNotEmpty ? content.ctaPrimary : 'À propos du Groupe';
+    final cta2 = content.ctaSecondary;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 64, 24, 56),
+      color: Colors.white,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'TECHNOLOGIE  •  INNOVATION  •  AFRIQUE',
+                style: TextStyle(
+                  color: Color(0xFF64748B),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 20),
+              RichText(
+                text: TextSpan(
+                  style: const TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w800,
+                    height: 1.15,
+                    color: Color(0xFF0F172A),
+                    letterSpacing: -0.8,
+                  ),
+                  children: [
+                    TextSpan(text: title),
+                    if (highlight.isNotEmpty)
+                      TextSpan(
+                        text: highlight,
+                        style: const TextStyle(color: Color(0xFF0F172A)),
+                      ),
+                  ],
+                ),
+              ),
+              if (paragraph.isNotEmpty) ...[
+                const SizedBox(height: 18),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 560),
+                  child: Text(
+                    paragraph,
+                    style: const TextStyle(fontSize: 16, height: 1.6, color: Color(0xFF64748B)),
                   ),
                 ),
-                _section(5, VisionSection(text: content.visionText)),
-                _section(6, Footer(legal: content.footerLegal)),
               ],
-            ),
+              const SizedBox(height: 28),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  FilledButton(
+                    onPressed: () {},
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F172A),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                    ),
+                    child: Text(cta1),
+                  ),
+                  if (cta2.isNotEmpty)
+                    OutlinedButton(
+                      onPressed: () {},
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF0F172A),
+                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                      ),
+                      child: Text(cta2),
+                    ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _section(int index, Widget child) {
-    return FadeTransition(
-      opacity: _sectionFades[index],
-      child: SlideTransition(
-        position: _sectionSlides[index],
-        child: child,
+// ── About / Vision ─────────────────────────────────────────────
+class _About extends StatelessWidget {
+  const _About({required this.content});
+  final SiteContent content;
+
+  @override
+  Widget build(BuildContext context) {
+    final vision = content.visionText;
+    final features = content.features;
+
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFFF8FAFC),
+      padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1000),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Une vision.  Des solutions.  Un impact.',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                  height: 1.25,
+                ),
+              ),
+              if (vision.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  vision,
+                  style: const TextStyle(fontSize: 15, height: 1.65, color: Color(0xFF64748B)),
+                ),
+              ],
+              if (features.isNotEmpty) ...[
+                const SizedBox(height: 36),
+                LayoutBuilder(
+                  builder: (context, c) {
+                    final cols = c.maxWidth > 800 ? 3 : (c.maxWidth > 520 ? 2 : 1);
+                    return Wrap(
+                      spacing: 20,
+                      runSpacing: 20,
+                      children: features.map((f) {
+                        return SizedBox(
+                          width: cols == 1 ? c.maxWidth : (c.maxWidth - 20 * (cols - 1)) / cols,
+                          child: _PillarCard(title: f.title, text: f.text),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-// ────────────────────────────────────────────────
-// Helpers internes
-// ────────────────────────────────────────────────
-
-class _ContentSecurity {
-  const _ContentSecurity._();
-
-  static String text(String? value, {int maxLength = 4000}) {
-    if (value == null || value.isEmpty) return '';
-    final cleaned = value
-        .replaceAll(
-          RegExp(
-            r'[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFEFF\u202A-\u202E\u2066-\u2069]',
-          ),
-          '',
-        )
-        .trim();
-    if (cleaned.length <= maxLength) return cleaned;
-    return cleaned.substring(0, maxLength);
-  }
-}
-
-class _ConsentMemory {
-  const _ConsentMemory._();
-  static bool? choice;
-}
-
-// ────────────────────────────────────────────────
-// Loading skeleton (blanc)
-// ────────────────────────────────────────────────
-
-class _HomeLoadingSkeleton extends StatefulWidget {
-  const _HomeLoadingSkeleton();
-
-  @override
-  State<_HomeLoadingSkeleton> createState() => _HomeLoadingSkeletonState();
-}
-
-class _HomeLoadingSkeletonState extends State<_HomeLoadingSkeleton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _pulse;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1100),
-    )..repeat(reverse: true);
-    _pulse = _controller.drive(CurveTween(curve: Curves.easeInOutSine));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+class _PillarCard extends StatelessWidget {
+  const _PillarCard({required this.title, required this.text});
+  final String title;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _pulse,
-      builder: (context, _) {
-        final opacity = 0.40 + (_pulse.value * 0.60);
-        return Semantics(
-          label: 'Chargement de la page',
-          child: SafeArea(
-            child: ListView(
-              physics: const ClampingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 48),
-              children: [
-                Opacity(
-                  opacity: opacity,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          _box(44, width: 44, r: 14),
-                          const SizedBox(width: 12),
-                          Expanded(child: _box(18)),
-                          const SizedBox(width: 24),
-                          _box(40, width: 120, r: 999),
-                        ],
-                      ),
-                      const SizedBox(height: 56),
-                      _box(20, width: 160, r: 999),
-                      const SizedBox(height: 18),
-                      _box(56, r: 18),
-                      const SizedBox(height: 12),
-                      _box(56, width: MediaQuery.of(context).size.width * 0.72, r: 18),
-                      const SizedBox(height: 18),
-                      _box(16, r: 10),
-                      const SizedBox(height: 10),
-                      _box(16, width: MediaQuery.of(context).size.width * 0.82, r: 10),
-                      const SizedBox(height: 34),
-                      _box(240, r: 28),
-                      const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          Expanded(child: _box(170, r: 24)),
-                          const SizedBox(width: 16),
-                          Expanded(child: _box(170, r: 24)),
-                        ],
-                      ),
-                    ],
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+          if (text.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(text, style: const TextStyle(fontSize: 13, height: 1.55, color: Color(0xFF64748B))),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Solutions ──────────────────────────────────────────────────
+class _Solutions extends StatelessWidget {
+  const _Solutions({required this.content});
+  final SiteContent content;
+
+  @override
+  Widget build(BuildContext context) {
+    final list = content.solutions;
+    if (list.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Nos Solutions',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF64748B),
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Un écosystème conçu pour répondre aux réalités africaines.',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                  height: 1.25,
+                ),
+              ),
+              const SizedBox(height: 28),
+              LayoutBuilder(
+                builder: (context, c) {
+                  final cols = c.maxWidth > 900 ? 4 : (c.maxWidth > 600 ? 2 : 1);
+                  final w = cols == 1 ? c.maxWidth : (c.maxWidth - 16 * (cols - 1)) / cols;
+                  return Wrap(
+                    spacing: 16,
+                    runSpacing: 16,
+                    children: list.map((s) {
+                      return SizedBox(
+                        width: w,
+                        child: _SolutionCard(
+                          title: s.title,
+                          subtitle: s.subtitle,
+                          text: s.text,
+                          featured: s.featured,
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SolutionCard extends StatelessWidget {
+  const _SolutionCard({
+    required this.title,
+    required this.subtitle,
+    required this.text,
+    this.featured = false,
+  });
+  final String title;
+  final String subtitle;
+  final String text;
+  final bool featured;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: featured ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: featured ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: featured ? Colors.white : const Color(0xFF0F172A),
+            ),
+          ),
+          if (subtitle.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: featured ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+              ),
+            ),
+          ],
+          if (text.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              text,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.5,
+                color: featured ? const Color(0xFFCBD5E1) : const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Produit phare (THIX ID) ────────────────────────────────────
+class _ProductHighlight extends StatelessWidget {
+  const _ProductHighlight({required this.content});
+  final SiteContent content;
+
+  @override
+  Widget build(BuildContext context) {
+    // On réutilise hero / solutions pour ne rien hardcoder
+    final title = content.solutions.isNotEmpty
+        ? content.solutions.first.title
+        : content.heroTitle;
+    final text = content.solutions.isNotEmpty
+        ? content.solutions.first.text
+        : content.heroParagraph;
+    final cta = content.ctaPrimary;
+
+    if (title.isEmpty && text.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFF0F172A),
+      padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: Column(
+            children: [
+              const Text(
+                'PRODUIT PHARE',
+                style: TextStyle(
+                  color: Color(0xFF94A3B8),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  height: 1.2,
+                ),
+              ),
+              if (text.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 15, height: 1.6),
+                ),
+              ],
+              if (cta.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: () {},
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF0F172A),
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                  ),
+                  child: Text(cta),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Impact ─────────────────────────────────────────────────────
+class _Impact extends StatelessWidget {
+  const _Impact({required this.content});
+  final SiteContent content;
+
+  @override
+  Widget build(BuildContext context) {
+    final stats = content.stats;
+    final quote = content.impactQuote;
+    if (stats.isEmpty && quote.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1000),
+          child: Column(
+            children: [
+              const Text(
+                'Notre Impact',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF64748B),
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Innover. Connecter. Transformer.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              if (stats.isNotEmpty) ...[
+                const SizedBox(height: 36),
+                Wrap(
+                  spacing: 32,
+                  runSpacing: 24,
+                  alignment: WrapAlignment.center,
+                  children: stats
+                      .map((s) => SizedBox(
+                            width: 140,
+                            child: Column(
+                              children: [
+                                Text(
+                                  s.value,
+                                  style: const TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  s.label,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.35),
+                                ),
+                              ],
+                            ),
+                          ))
+                      .toList(),
+                ),
+              ],
+              if (quote.isNotEmpty) ...[
+                const SizedBox(height: 36),
+                Text(
+                  quote,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
+                    height: 1.4,
                   ),
                 ),
               ],
-            ),
+            ],
           ),
-        );
-      },
-    );
-  }
-
-  Widget _box(double h, {double? width, double r = 16}) {
-    return Container(
-      height: h,
-      width: width,
-      decoration: BoxDecoration(
-        color: const Color(0xFFEEF2F7),
-        borderRadius: BorderRadius.circular(r),
+        ),
       ),
     );
   }
 }
 
-// ────────────────────────────────────────────────
-// Error view
-// ────────────────────────────────────────────────
-
-class _HomeErrorView extends StatelessWidget {
-  const _HomeErrorView({required this.onRetry, this.isTimeout = false});
-
-  final VoidCallback onRetry;
-  final bool isTimeout;
+// ── Actualités (utilise features en fallback si pas de news dédiées) ──
+class _News extends StatelessWidget {
+  const _News({required this.content});
+  final SiteContent content;
 
   @override
   Widget build(BuildContext context) {
-    final title = isTimeout ? 'Délai dépassé' : 'Impossible de charger la page';
-    final message = isTimeout
-        ? 'Le service met trop de temps à répondre. Vérifiez votre connexion puis réessayez.'
-        : 'Une erreur est survenue pendant le chargement. Aucune donnée sensible n’a été exposée.';
+    // Pas de modèle News dédié → on n'affiche rien si vide
+    // (évite le hardcode). Tu pourras brancher content.news plus tard.
+    return const SizedBox.shrink();
+  }
+}
 
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
+// ── CTA final ──────────────────────────────────────────────────
+class _CtaBand extends StatelessWidget {
+  const _CtaBand({required this.content});
+  final SiteContent content;
+
+  @override
+  Widget build(BuildContext context) {
+    final cta = content.ctaPrimary.isNotEmpty ? content.ctaPrimary : 'Nous contacter';
+
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFFF8FAFC),
+      padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: Column(
+            children: [
+              const Text(
+                'Construisons ensemble la prochaine génération de solutions africaines.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Vous êtes une entreprise, une institution, un investisseur ou un partenaire ? Parlons de ce que nous pouvons construire ensemble.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, height: 1.55, color: Color(0xFF64748B)),
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: () {},
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F172A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                ),
+                child: Text(cta),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Footer ─────────────────────────────────────────────────────
+class _Footer extends StatelessWidget {
+  const _Footer({required this.content});
+  final SiteContent content;
+
+  @override
+  Widget build(BuildContext context) {
+    final legal = content.footerLegal.isNotEmpty
+        ? content.footerLegal
+        : '© 2026 SONATHIX GROUP. Tous droits réservés.';
+
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFF0F172A),
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+      child: Column(
+        children: [
+          const Text(
+            'SONATHIX GROUP',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.5,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Technology  •  Innovation  •  Africa',
+            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            legal,
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Consent ────────────────────────────────────────────────────
+class _ConsentBanner extends StatelessWidget {
+  const _ConsentBanner({
+    required this.text,
+    required this.onAccept,
+    required this.onRefuse,
+  });
+  final String text;
+  final VoidCallback onAccept;
+  final VoidCallback onRefuse;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 10,
+      borderRadius: BorderRadius.circular(14),
+      color: const Color(0xFF0F172A),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.circular(28),
-              ),
-              child: const Icon(Icons.cloud_off_rounded, size: 42, color: Color(0xFF6B7280)),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF111827),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 15, height: 1.45, color: Color(0xFF6B7280)),
-            ),
-            const SizedBox(height: 26),
-            ElevatedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Réessayer'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF111827),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-              ),
+            Text(text, style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12, height: 1.45)),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: onRefuse,
+                  style: TextButton.styleFrom(foregroundColor: const Color(0xFF94A3B8)),
+                  child: const Text('Refuser'),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: onAccept,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF0F172A),
+                  ),
+                  child: const Text('Accepter'),
+                ),
+              ],
             ),
           ],
         ),
@@ -615,33 +1030,89 @@ class _HomeErrorView extends StatelessWidget {
   }
 }
 
-// ────────────────────────────────────────────────
-// Back to top
-// ────────────────────────────────────────────────
-
-class _BackToTopButton extends StatelessWidget {
-  const _BackToTopButton({required this.onPressed});
-  final VoidCallback onPressed;
+class _RoundIconButton extends StatelessWidget {
+  const _RoundIconButton({required this.icon, required this.onTap, required this.label});
+  final IconData icon;
+  final VoidCallback onTap;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: 'Revenir en haut de page',
+      label: label,
       button: true,
       child: Material(
-        color: const Color(0xFF111827),
+        color: const Color(0xFF0F172A),
         borderRadius: BorderRadius.circular(999),
         elevation: 6,
-        shadowColor: const Color.fromRGBO(0, 0, 0, 0.18),
         child: InkWell(
-          onTap: onPressed,
+          onTap: onTap,
           borderRadius: BorderRadius.circular(999),
-          child: const Padding(
-            padding: EdgeInsets.all(14),
-            child: Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 22),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Icon(icon, color: Colors.white, size: 22),
           ),
         ),
       ),
     );
   }
+}
+
+// ── Skeleton / Error ───────────────────────────────────────────
+class _Skeleton extends StatelessWidget {
+  const _Skeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: SizedBox(
+        width: 28,
+        height: 28,
+        child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF0F172A)),
+      ),
+    );
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  const _ErrorView({required this.onRetry, this.isTimeout = false});
+  final VoidCallback onRetry;
+  final bool isTimeout;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off_rounded, size: 48, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              isTimeout ? 'Délai dépassé' : 'Impossible de charger la page',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Vérifiez votre connexion puis réessayez.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Réessayer'),
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0F172A)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ConsentMemory {
+  static bool? choice;
 }

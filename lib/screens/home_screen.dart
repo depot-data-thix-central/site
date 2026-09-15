@@ -506,7 +506,7 @@ class _ContentSecurity {
     return cleaned.substring(0, maxLength);
   }
 
-  static bool isSafeUrl(String? value, {bool allowHttp = false}) {
+  
     if (value == null || value.isEmpty) return false;
 
     final uri = Uri.tryParse(value);

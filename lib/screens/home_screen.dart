@@ -1,9 +1,8 @@
 
-
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import '../models/content.dart';
 import '../services/content_service.dart';
 

@@ -95,12 +95,13 @@ class SiteContent {
 
     // 1. Extraire contentMap (gère Map, JSON encodé en String, ou objet racine)
     Map<String, dynamic> contentMap = json;
-    if (json.containsKey('data') && json['data'] != null) {
-      if (json['data'] is Map) {
-        contentMap = Map<String, dynamic>.from(json['data'] as Map);
-      } else if (json['data'] is String) {
+    final rawData = json['data'];
+    if (rawData != null) {
+      if (rawData is Map) {
+        contentMap = Map<String, dynamic>.from(rawData);
+      } else if (rawData is String) {
         try {
-          final decoded = jsonDecode(json['data'] as String);
+          final decoded = jsonDecode(rawData);
           if (decoded is Map) {
             contentMap = Map<String, dynamic>.from(decoded);
           }
@@ -108,16 +109,16 @@ class SiteContent {
       }
     }
 
-    // 2. Extraire chaque sous-bloc sans risquer de lever une exception
-    final seo = contentMap['seo'] is Map ? contentMap['seo'] as Map : {};
-    final hero = contentMap['hero'] is Map ? contentMap['hero'] as Map : {};
-    final about = contentMap['about'] is Map ? contentMap['about'] as Map : {};
-    final impact = contentMap['impact'] is Map ? contentMap['impact'] as Map : {};
-    final vision = contentMap['vision'] as Map ? contentMap['vision'] as Map : {};
-    final manager = contentMap['manager'] is Map ? contentMap['manager'] as Map : {};
-    final footer = contentMap['footer'] is Map ? contentMap['footer'] as Map : {};
-    final consent = contentMap['consent'] is Map ? contentMap['consent'] as Map : {};
-    final meta = contentMap['meta'] is Map ? contentMap['meta'] as Map : {};
+    // 2. Extraire chaque sous-bloc de manière fortement typée
+    final seo = _asMap(contentMap['seo']);
+    final hero = _asMap(contentMap['hero']);
+    final about = _asMap(contentMap['about']);
+    final impact = _asMap(contentMap['impact']);
+    final vision = _asMap(contentMap['vision']);
+    final manager = _asMap(contentMap['manager']);
+    final footer = _asMap(contentMap['footer']);
+    final consent = _asMap(contentMap['consent']);
+    final meta = _asMap(contentMap['meta']);
 
     // 3. Fallback hybride pour la direction (colonnes plates ou objet 'data')
     final managerNameVal = json['manager_name'] ?? contentMap['manager_name'] ?? manager['name'];
@@ -126,10 +127,11 @@ class SiteContent {
 
     // 4. Métadonnées
     int parsedVersion = 1;
-    if (meta['version'] is int) {
-      parsedVersion = meta['version'] as int;
-    } else if (meta['version'] is String) {
-      parsedVersion = int.tryParse(meta['version'] as String) ?? 1;
+    final rawVersion = meta['version'];
+    if (rawVersion is int) {
+      parsedVersion = rawVersion;
+    } else if (rawVersion is String) {
+      parsedVersion = int.tryParse(rawVersion) ?? 1;
     }
 
     return SiteContent(
@@ -337,6 +339,12 @@ class SiteContent {
     );
   }
 
+  static Map<String, dynamic> _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return const <String, dynamic>{};
+  }
+
   static List<Feature> _parseFeatures(dynamic list) {
     if (list is! List) return const [];
     final parsed = list
@@ -516,10 +524,6 @@ class SiteContent {
         ),
       );
 }
-
-// =========================================================================
-// CLASSES AUXILIAIRES
-// =========================================================================
 
 @immutable
 class Feature {

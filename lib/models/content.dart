@@ -19,10 +19,17 @@ class SiteContent {
   final String? heroImageUrl;
   final String? heroImageAsset;
 
+  // À propos
+  final String aboutTitle;
+  final String aboutText;
+  final String? aboutImageUrl;
+
   // Collections
   final List<Feature> features;
   final List<Solution> solutions;
   final List<Stat> stats;
+  final List<TeamMember> team;
+  final List<GalleryItem> gallery;
 
   // Impact & Vision
   final String impactQuote;
@@ -57,9 +64,14 @@ class SiteContent {
     this.ctaSecondary = '',
     this.heroImageUrl,
     this.heroImageAsset,
+    this.aboutTitle = '',
+    this.aboutText = '',
+    this.aboutImageUrl,
     this.features = const [],
     this.solutions = const [],
     this.stats = const [],
+    this.team = const [],
+    this.gallery = const [],
     this.impactQuote = '',
     this.visionText = '',
     this.visionImageUrl,
@@ -77,18 +89,24 @@ class SiteContent {
   factory SiteContent.empty() => const SiteContent();
   factory SiteContent.demo() => const SiteContent();
 
-  factory SiteContent.fromJson(Map<String, dynamic>? json) {
+    factory SiteContent.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const SiteContent();
 
     try {
-      final seo = json['seo'] as Map<String, dynamic>? ?? {};
-      final hero = json['hero'] as Map<String, dynamic>? ?? {};
-      final impact = json['impact'] as Map<String, dynamic>? ?? {};
-      final vision = json['vision'] as Map<String, dynamic>? ?? {};
-      final manager = json['manager'] as Map<String, dynamic>? ?? {};
-      final footer = json['footer'] as Map<String, dynamic>? ?? {};
-      final consent = json['consent'] as Map<String, dynamic>? ?? {};
-      final meta = json['meta'] as Map<String, dynamic>? ?? {};
+      // 👈 CORRECTION : Extraire la colonne 'data' si elle existe dans la ligne Supabase
+      final Map<String, dynamic> contentMap = (json['data'] is Map)
+          ? Map<String, dynamic>.from(json['data'] as Map)
+          : json;
+
+      final seo = contentMap['seo'] as Map<String, dynamic>? ?? {};
+      final hero = contentMap['hero'] as Map<String, dynamic>? ?? {};
+      final about = contentMap['about'] as Map<String, dynamic>? ?? {};
+      final impact = contentMap['impact'] as Map<String, dynamic>? ?? {};
+      final vision = contentMap['vision'] as Map<String, dynamic>? ?? {};
+      final manager = contentMap['manager'] as Map<String, dynamic>?;
+      final footer = contentMap['footer'] as Map<String, dynamic>? ?? {};
+      final consent = contentMap['consent'] as Map<String, dynamic>? ?? {};
+      final meta = contentMap['meta'] as Map<String, dynamic>? ?? {};
 
       return SiteContent(
         seoTitle: _safeString(seo['title'], defaultValue: '', maxLength: 80),
@@ -103,16 +121,24 @@ class SiteContent {
         ctaSecondary: _safeString(hero['cta_secondary'], defaultValue: '', maxLength: 40),
         heroImageUrl: _safeUrl(hero['image_url']),
         heroImageAsset: _safeString(hero['image_asset'], defaultValue: null, maxLength: 200),
-        features: _parseFeatures(json['features']),
-        solutions: _parseSolutions(json['solutions']),
+        aboutTitle: _safeString(about['title'], defaultValue: '', maxLength: 140),
+        aboutText: _safeString(about['text'], defaultValue: '', maxLength: 1600),
+        aboutImageUrl: _safeUrl(about['image_url']),
+        features: _parseFeatures(contentMap['features']),
+        solutions: _parseSolutions(contentMap['solutions']),
         stats: _parseStats(impact['stats']),
+        team: _parseTeam(contentMap['team']),
+        gallery: _parseGallery(contentMap['gallery']),
         impactQuote: _safeString(impact['quote'], defaultValue: '', maxLength: 400),
         visionText: _safeString(vision['text_bold'], defaultValue: '', maxLength: 1600),
         visionImageUrl: _safeUrl(vision['image_url']),
         visionImageAsset: _safeString(vision['image_asset'], defaultValue: null, maxLength: 200),
-        managerName: _safeString(manager['name'], defaultValue: '', maxLength: 100),
-        managerMessage: _safeString(manager['message'], defaultValue: '', maxLength: 600),
-        managerPhotoUrl: _safeUrl(manager['photo_url']),
+        
+        // 👈 Lecture hybride : vérifie la colonne plate en priorité, puis la colonne 'data'
+        managerName: _safeString(json['manager_name'] ?? contentMap['manager_name'] ?? manager?['name'], defaultValue: '', maxLength: 100),
+        managerMessage: _safeString(json['manager_message'] ?? contentMap['manager_message'] ?? manager?['message'], defaultValue: '', maxLength: 600),
+        managerPhotoUrl: _safeUrl(json['manager_photo_url'] ?? contentMap['manager_photo_url'] ?? manager?['photo_url']),
+        
         consentText: _safeString(consent['text'], defaultValue: '', maxLength: 600),
         footerLegal: _safeString(footer['legal'], defaultValue: '', maxLength: 1200),
         version: meta['version'] is int ? meta['version'] as int : 1,
@@ -123,6 +149,7 @@ class SiteContent {
       return const SiteContent();
     }
   }
+
 
   Map<String, dynamic> toJson() {
     return {
@@ -142,10 +169,17 @@ class SiteContent {
         'image_url': heroImageUrl,
         'image_asset': heroImageAsset,
       },
+      'about': {
+        'title': aboutTitle,
+        'text': aboutText,
+        'image_url': aboutImageUrl,
+      },
       'features': features.map((f) => f.toJson()).toList(),
       'solutions': {
         'main': solutions.map((s) => s.toJson()).toList(),
       },
+      'team': team.map((m) => m.toJson()).toList(),
+      'gallery': gallery.map((g) => g.toJson()).toList(),
       'impact': {
         'stats': stats.map((s) => s.toJson()).toList(),
         'quote': impactQuote,
@@ -155,11 +189,12 @@ class SiteContent {
         'image_url': visionImageUrl,
         'image_asset': visionImageAsset,
       },
-      'manager': {
-        'name': managerName,
-        'message': managerMessage,
-        'photo_url': managerPhotoUrl,
-      },
+      
+      // CORRECTION : Envoi direct aux nom des colonnes plates Supabase
+      'manager_name': managerName,
+      'manager_message': managerMessage,
+      'manager_photo_url': managerPhotoUrl,
+
       'consent': {
         'text': consentText,
       },
@@ -187,9 +222,14 @@ class SiteContent {
     String? ctaSecondary,
     String? heroImageUrl,
     String? heroImageAsset,
+    String? aboutTitle,
+    String? aboutText,
+    String? aboutImageUrl,
     List<Feature>? features,
     List<Solution>? solutions,
     List<Stat>? stats,
+    List<TeamMember>? team,
+    List<GalleryItem>? gallery,
     String? impactQuote,
     String? visionText,
     String? visionImageUrl,
@@ -216,9 +256,14 @@ class SiteContent {
       ctaSecondary: ctaSecondary ?? this.ctaSecondary,
       heroImageUrl: heroImageUrl ?? this.heroImageUrl,
       heroImageAsset: heroImageAsset ?? this.heroImageAsset,
+      aboutTitle: aboutTitle ?? this.aboutTitle,
+      aboutText: aboutText ?? this.aboutText,
+      aboutImageUrl: aboutImageUrl ?? this.aboutImageUrl,
       features: features ?? this.features,
       solutions: solutions ?? this.solutions,
       stats: stats ?? this.stats,
+      team: team ?? this.team,
+      gallery: gallery ?? this.gallery,
       impactQuote: impactQuote ?? this.impactQuote,
       visionText: visionText ?? this.visionText,
       visionImageUrl: visionImageUrl ?? this.visionImageUrl,
@@ -248,6 +293,9 @@ class SiteContent {
       ctaSecondary: other.ctaSecondary.isNotEmpty ? other.ctaSecondary : null,
       heroImageUrl: other.heroImageUrl ?? heroImageUrl,
       heroImageAsset: other.heroImageAsset ?? heroImageAsset,
+      aboutTitle: other.aboutTitle.isNotEmpty ? other.aboutTitle : null,
+      aboutText: other.aboutText.isNotEmpty ? other.aboutText : null,
+      aboutImageUrl: other.aboutImageUrl ?? aboutImageUrl,
       impactQuote: other.impactQuote.isNotEmpty ? other.impactQuote : null,
       visionText: other.visionText.isNotEmpty ? other.visionText : null,
       visionImageUrl: other.visionImageUrl ?? visionImageUrl,
@@ -260,6 +308,8 @@ class SiteContent {
       features: other.features.isNotEmpty ? other.features : null,
       solutions: other.solutions.isNotEmpty ? other.solutions : null,
       stats: other.stats.isNotEmpty ? other.stats : null,
+      team: other.team.isNotEmpty ? other.team : null,
+      gallery: other.gallery.isNotEmpty ? other.gallery : null,
       version: version + 1,
       lastUpdated: DateTime.now(),
       updatedBy: other.updatedBy ?? updatedBy,
@@ -311,6 +361,37 @@ class SiteContent {
     return List.unmodifiable(parsed);
   }
 
+  static List<TeamMember> _parseTeam(dynamic list) {
+    if (list is! List) return const [];
+    final parsed = list
+        .whereType<Map>()
+        .map((e) => TeamMember(
+              name: _safeString(e['name'], defaultValue: '', maxLength: 100),
+              role: _safeString(e['role'], defaultValue: '', maxLength: 100),
+              bio: _safeString(e['bio'], defaultValue: null, maxLength: 400),
+              photoUrl: _safeUrl(e['photo_url']),
+            ))
+        .toList();
+    return List.unmodifiable(parsed);
+  }
+
+  static List<GalleryItem> _parseGallery(dynamic list) {
+    if (list is! List) return const [];
+    final parsed = list
+        .whereType<Map>()
+        .map((e) {
+          final url = _safeUrl(e['url']);
+          if (url == null) return null;
+          return GalleryItem(
+            url: url,
+            caption: _safeString(e['caption'], defaultValue: null, maxLength: 140),
+          );
+        })
+        .whereType<GalleryItem>()
+        .toList();
+    return List.unmodifiable(parsed);
+  }
+
   static String _safeString(dynamic value, {String? defaultValue, int maxLength = 4000}) {
     if (value == null) return defaultValue ?? '';
     final str = value.toString();
@@ -356,6 +437,9 @@ class SiteContent {
         ctaSecondary == other.ctaSecondary &&
         heroImageUrl == other.heroImageUrl &&
         heroImageAsset == other.heroImageAsset &&
+        aboutTitle == other.aboutTitle &&
+        aboutText == other.aboutText &&
+        aboutImageUrl == other.aboutImageUrl &&
         impactQuote == other.impactQuote &&
         visionText == other.visionText &&
         visionImageUrl == other.visionImageUrl &&
@@ -382,14 +466,17 @@ class SiteContent {
         ctaSecondary,
         heroImageUrl,
         heroImageAsset,
+        aboutTitle,
+        aboutText,
+        aboutImageUrl,
         impactQuote,
-        visionText,
-        visionImageUrl,
-        visionImageAsset,
-        managerName,
-        managerMessage,
-        managerPhotoUrl,
         Object.hash(
+          visionText,
+          visionImageUrl,
+          visionImageAsset,
+          managerName,
+          managerMessage,
+          managerPhotoUrl,
           consentText,
           footerLegal,
           version,
@@ -398,10 +485,9 @@ class SiteContent {
 }
 
 // =========================================================================
-// CLASSES AUXILIAIRES (AU NIVEAU SUPÉRIEUR)
+// CLASSES AUXILIAIRES
 // =========================================================================
 
-/// Feature (caractéristique produit/service).
 @immutable
 class Feature {
   final String title;
@@ -439,7 +525,6 @@ class Feature {
   int get hashCode => Object.hash(title, text, icon);
 }
 
-/// Solution (offre commerciale).
 @immutable
 class Solution {
   final String title;
@@ -480,7 +565,6 @@ class Solution {
   int get hashCode => Object.hash(title, subtitle, featured);
 }
 
-/// Stat (chiffre clé).
 @immutable
 class Stat {
   final String value;
@@ -507,4 +591,66 @@ class Stat {
 
   @override
   int get hashCode => Object.hash(value, label);
+}
+
+@immutable
+class TeamMember {
+  final String name;
+  final String role;
+  final String? bio;
+  final String? photoUrl;
+
+  const TeamMember({
+    this.name = '',
+    this.role = '',
+    this.bio,
+    this.photoUrl,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'role': role,
+      'bio': bio,
+      'photo_url': photoUrl,
+    };
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! TeamMember) return false;
+    return name == other.name && role == other.role && photoUrl == other.photoUrl;
+  }
+
+  @override
+  int get hashCode => Object.hash(name, role, photoUrl);
+}
+
+@immutable
+class GalleryItem {
+  final String url;
+  final String? caption;
+
+  const GalleryItem({
+    required this.url,
+    this.caption,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'url': url,
+      'caption': caption,
+    };
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! GalleryItem) return false;
+    return url == other.url && caption == other.caption;
+  }
+
+  @override
+  int get hashCode => Object.hash(url, caption);
 }

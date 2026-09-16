@@ -66,26 +66,22 @@ class ContentService {
   }
 
   Future<SiteContent> _fetch(dynamic client) async {
+    // 👈 CORRECTION : On sélectionne toutes les colonnes (*) et non uniquement 'data'
     final row = await client
         .from('content_published')
-        .select('data')
+        .select('*')
         .eq('id', 1)
         .maybeSingle()
         .timeout(_requestTimeout);
 
-    if (row == null || row['data'] == null) {
+    if (row == null) {
       _log('no_data');
       return _fallback();
     }
 
-    final raw = row['data'];
-    if (raw is! Map) {
-      _log('invalid_type', {'actual': raw.runtimeType.toString()});
-      return _fallback();
-    }
-
     try {
-      final data = Map<String, dynamic>.from(raw);
+      // 👈 CORRECTION : On convertit directement la ligne complète de la base de données
+      final data = Map<String, dynamic>.from(row as Map);
       return SiteContent.fromJson(data);
     } catch (e, st) {
       _log('parse_failed', {

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 /// Modèle complet du site.
@@ -89,67 +90,90 @@ class SiteContent {
   factory SiteContent.empty() => const SiteContent();
   factory SiteContent.demo() => const SiteContent();
 
-    factory SiteContent.fromJson(Map<String, dynamic>? json) {
+  factory SiteContent.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const SiteContent();
 
-    try {
-      // 👈 CORRECTION : Extraire la colonne 'data' si elle existe dans la ligne Supabase
-      final Map<String, dynamic> contentMap = (json['data'] is Map)
-          ? Map<String, dynamic>.from(json['data'] as Map)
-          : json;
-
-      final seo = contentMap['seo'] as Map<String, dynamic>? ?? {};
-      final hero = contentMap['hero'] as Map<String, dynamic>? ?? {};
-      final about = contentMap['about'] as Map<String, dynamic>? ?? {};
-      final impact = contentMap['impact'] as Map<String, dynamic>? ?? {};
-      final vision = contentMap['vision'] as Map<String, dynamic>? ?? {};
-      final manager = contentMap['manager'] as Map<String, dynamic>?;
-      final footer = contentMap['footer'] as Map<String, dynamic>? ?? {};
-      final consent = contentMap['consent'] as Map<String, dynamic>? ?? {};
-      final meta = contentMap['meta'] as Map<String, dynamic>? ?? {};
-
-      return SiteContent(
-        seoTitle: _safeString(seo['title'], defaultValue: '', maxLength: 80),
-        seoDescription: _safeString(seo['description'], defaultValue: '', maxLength: 200),
-        seoKeywords: _safeString(seo['keywords'], defaultValue: '', maxLength: 200),
-        seoOgImage: _safeString(seo['ogImage'], defaultValue: '', maxLength: 500),
-        seoCanonicalUrl: _safeString(seo['canonicalUrl'], defaultValue: '', maxLength: 500),
-        heroTitle: _safeString(hero['title_a'], defaultValue: '', maxLength: 140),
-        heroHighlight: _safeString(hero['title_highlight'], defaultValue: '', maxLength: 80),
-        heroParagraph: _safeString(hero['paragraph'], defaultValue: '', maxLength: 600),
-        ctaPrimary: _safeString(hero['cta_primary'], defaultValue: '', maxLength: 40),
-        ctaSecondary: _safeString(hero['cta_secondary'], defaultValue: '', maxLength: 40),
-        heroImageUrl: _safeUrl(hero['image_url']),
-        heroImageAsset: _safeString(hero['image_asset'], defaultValue: null, maxLength: 200),
-        aboutTitle: _safeString(about['title'], defaultValue: '', maxLength: 140),
-        aboutText: _safeString(about['text'], defaultValue: '', maxLength: 1600),
-        aboutImageUrl: _safeUrl(about['image_url']),
-        features: _parseFeatures(contentMap['features']),
-        solutions: _parseSolutions(contentMap['solutions']),
-        stats: _parseStats(impact['stats']),
-        team: _parseTeam(contentMap['team']),
-        gallery: _parseGallery(contentMap['gallery']),
-        impactQuote: _safeString(impact['quote'], defaultValue: '', maxLength: 400),
-        visionText: _safeString(vision['text_bold'], defaultValue: '', maxLength: 1600),
-        visionImageUrl: _safeUrl(vision['image_url']),
-        visionImageAsset: _safeString(vision['image_asset'], defaultValue: null, maxLength: 200),
-        
-        // 👈 Lecture hybride : vérifie la colonne plate en priorité, puis la colonne 'data'
-        managerName: _safeString(json['manager_name'] ?? contentMap['manager_name'] ?? manager?['name'], defaultValue: '', maxLength: 100),
-        managerMessage: _safeString(json['manager_message'] ?? contentMap['manager_message'] ?? manager?['message'], defaultValue: '', maxLength: 600),
-        managerPhotoUrl: _safeUrl(json['manager_photo_url'] ?? contentMap['manager_photo_url'] ?? manager?['photo_url']),
-        
-        consentText: _safeString(consent['text'], defaultValue: '', maxLength: 600),
-        footerLegal: _safeString(footer['legal'], defaultValue: '', maxLength: 1200),
-        version: meta['version'] is int ? meta['version'] as int : 1,
-        lastUpdated: meta['lastUpdated'] is String ? DateTime.tryParse(meta['lastUpdated'] as String) : null,
-        updatedBy: _safeString(meta['updatedBy'], defaultValue: null, maxLength: 100),
-      );
-    } catch (_) {
-      return const SiteContent();
+    // 1. Extraire contentMap (gère Map, JSON encodé en String, ou objet racine)
+    Map<String, dynamic> contentMap = json;
+    if (json.containsKey('data') && json['data'] != null) {
+      if (json['data'] is Map) {
+        contentMap = Map<String, dynamic>.from(json['data'] as Map);
+      } else if (json['data'] is String) {
+        try {
+          final decoded = jsonDecode(json['data'] as String);
+          if (decoded is Map) {
+            contentMap = Map<String, dynamic>.from(decoded);
+          }
+        } catch (_) {}
+      }
     }
-  }
 
+    // 2. Extraire chaque sous-bloc sans risquer de lever une exception
+    final seo = contentMap['seo'] is Map ? contentMap['seo'] as Map : {};
+    final hero = contentMap['hero'] is Map ? contentMap['hero'] as Map : {};
+    final about = contentMap['about'] is Map ? contentMap['about'] as Map : {};
+    final impact = contentMap['impact'] is Map ? contentMap['impact'] as Map : {};
+    final vision = contentMap['vision'] as Map ? contentMap['vision'] as Map : {};
+    final manager = contentMap['manager'] is Map ? contentMap['manager'] as Map : {};
+    final footer = contentMap['footer'] is Map ? contentMap['footer'] as Map : {};
+    final consent = contentMap['consent'] is Map ? contentMap['consent'] as Map : {};
+    final meta = contentMap['meta'] is Map ? contentMap['meta'] as Map : {};
+
+    // 3. Fallback hybride pour la direction (colonnes plates ou objet 'data')
+    final managerNameVal = json['manager_name'] ?? contentMap['manager_name'] ?? manager['name'];
+    final managerMsgVal = json['manager_message'] ?? contentMap['manager_message'] ?? manager['message'];
+    final managerPhotoVal = json['manager_photo_url'] ?? contentMap['manager_photo_url'] ?? manager['photo_url'];
+
+    // 4. Métadonnées
+    int parsedVersion = 1;
+    if (meta['version'] is int) {
+      parsedVersion = meta['version'] as int;
+    } else if (meta['version'] is String) {
+      parsedVersion = int.tryParse(meta['version'] as String) ?? 1;
+    }
+
+    return SiteContent(
+      seoTitle: _safeString(seo['title'], defaultValue: '', maxLength: 80),
+      seoDescription: _safeString(seo['description'], defaultValue: '', maxLength: 200),
+      seoKeywords: _safeString(seo['keywords'], defaultValue: '', maxLength: 200),
+      seoOgImage: _safeString(seo['ogImage'], defaultValue: '', maxLength: 500),
+      seoCanonicalUrl: _safeString(seo['canonicalUrl'], defaultValue: '', maxLength: 500),
+
+      heroTitle: _safeString(hero['title_a'] ?? hero['title'], defaultValue: '', maxLength: 140),
+      heroHighlight: _safeString(hero['title_highlight'], defaultValue: '', maxLength: 80),
+      heroParagraph: _safeString(hero['paragraph'], defaultValue: '', maxLength: 600),
+      ctaPrimary: _safeString(hero['cta_primary'] ?? hero['ctaPrimary'], defaultValue: '', maxLength: 40),
+      ctaSecondary: _safeString(hero['cta_secondary'] ?? hero['ctaSecondary'], defaultValue: '', maxLength: 40),
+      heroImageUrl: _safeUrl(hero['image_url']),
+      heroImageAsset: _safeString(hero['image_asset'], defaultValue: null, maxLength: 200),
+
+      aboutTitle: _safeString(about['title'], defaultValue: '', maxLength: 140),
+      aboutText: _safeString(about['text'], defaultValue: '', maxLength: 1600),
+      aboutImageUrl: _safeUrl(about['image_url']),
+
+      features: _parseFeatures(contentMap['features']),
+      solutions: _parseSolutions(contentMap['solutions']),
+      stats: _parseStats(impact['stats'] ?? contentMap['stats']),
+      team: _parseTeam(contentMap['team']),
+      gallery: _parseGallery(contentMap['gallery']),
+
+      impactQuote: _safeString(impact['quote'], defaultValue: '', maxLength: 400),
+      visionText: _safeString(vision['text_bold'] ?? vision['text'], defaultValue: '', maxLength: 1600),
+      visionImageUrl: _safeUrl(vision['image_url']),
+      visionImageAsset: _safeString(vision['image_asset'], defaultValue: null, maxLength: 200),
+
+      managerName: _safeString(managerNameVal, defaultValue: '', maxLength: 100),
+      managerMessage: _safeString(managerMsgVal, defaultValue: '', maxLength: 600),
+      managerPhotoUrl: _safeUrl(managerPhotoVal),
+
+      consentText: _safeString(consent['text'], defaultValue: '', maxLength: 600),
+      footerLegal: _safeString(footer['legal'], defaultValue: '', maxLength: 1200),
+
+      version: parsedVersion,
+      lastUpdated: meta['lastUpdated'] is String ? DateTime.tryParse(meta['lastUpdated'] as String) : null,
+      updatedBy: _safeString(meta['updatedBy'], defaultValue: null, maxLength: 100),
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -189,12 +213,9 @@ class SiteContent {
         'image_url': visionImageUrl,
         'image_asset': visionImageAsset,
       },
-      
-      // CORRECTION : Envoi direct aux nom des colonnes plates Supabase
       'manager_name': managerName,
       'manager_message': managerMessage,
       'manager_photo_url': managerPhotoUrl,
-
       'consent': {
         'text': consentText,
       },
@@ -332,16 +353,23 @@ class SiteContent {
   }
 
   static List<Solution> _parseSolutions(dynamic data) {
-    if (data is! Map) return const [];
-    final main = data['main'];
-    if (main is! List) return const [];
-    final parsed = main
+    List listToParse = [];
+    if (data is List) {
+      listToParse = data;
+    } else if (data is Map) {
+      final main = data['main'];
+      if (main is List) listToParse = main;
+    }
+
+    if (listToParse.isEmpty) return const [];
+
+    final parsed = listToParse
         .whereType<Map>()
         .map((e) => Solution(
               title: _safeString(e['title'], defaultValue: '', maxLength: 90),
               subtitle: _safeString(e['subtitle'], defaultValue: '', maxLength: 130),
               text: _safeString(e['text'], defaultValue: '', maxLength: 420),
-              featured: e['featured'] == true,
+              featured: e['featured'] == true || e['featured'] == 'true',
               imageUrl: _safeUrl(e['image_url']),
               imageAsset: _safeString(e['image_asset'], defaultValue: null, maxLength: 200),
             ))
@@ -404,9 +432,14 @@ class SiteContent {
     if (value == null) return null;
     final str = value.toString().trim();
     if (str.isEmpty) return null;
+    if (str.startsWith('http://') || str.startsWith('https://') || str.startsWith('/')) {
+      return _truncateSafely(str, 500);
+    }
     final uri = Uri.tryParse(str);
-    if (uri == null || !uri.hasScheme || !uri.isScheme('https')) return null;
-    return _truncateSafely(str, 500);
+    if (uri != null && uri.hasScheme) {
+      return _truncateSafely(str, 500);
+    }
+    return null;
   }
 
   static String _truncateSafely(String value, int maxLength) {

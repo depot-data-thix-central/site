@@ -4,7 +4,6 @@ import '../models/content.dart';
 import 'supabase_service.dart';
 
 class ContentService {
-  // Pattern Singleton pour garantir un cache unique
   static final ContentService _instance = ContentService._internal();
   factory ContentService() => _instance;
   ContentService._internal();
@@ -13,8 +12,9 @@ class ContentService {
   static const int _maxRetries = 3;
   static const Duration _cacheTTL = Duration(minutes: 5);
 
-  static SiteContent? _cached;
-  static DateTime? _cachedAt;
+  SiteContent? _cached;
+  DateTime? _cachedAt;
+  Future<SiteContent>? _inFlightRequest;
 
   Future<SiteContent> loadPublished({bool forceRefresh = false}) async {
     if (!forceRefresh && _isCacheValid()) {
@@ -22,10 +22,25 @@ class ContentService {
       return _cached!;
     }
 
+    // Réutilise la requête en cours si un chargement est déjà lancé
+    if (_inFlightRequest != null) {
+      _log('joining_in_flight_request');
+      return _inFlightRequest!;
+    }
+
+    _inFlightRequest = _fetchWithRetry();
+    try {
+      return await _inFlightRequest!;
+    } finally {
+      _inFlightRequest = null;
+    }
+  }
+
+  Future<SiteContent> _fetchWithRetry() async {
     final client = SupabaseService.client;
     if (client == null) {
       _log('supabase_not_ready');
-      return _fallback();
+      return _cached ?? _fallback();
     }
 
     Object? lastError;
@@ -66,7 +81,6 @@ class ContentService {
   }
 
   Future<SiteContent> _fetch(dynamic client) async {
-    // 👈 CORRECTION : On sélectionne toutes les colonnes (*) et non uniquement 'data'
     final row = await client
         .from('content_published')
         .select('*')
@@ -76,11 +90,10 @@ class ContentService {
 
     if (row == null) {
       _log('no_data');
-      return _fallback();
+      return _cached ?? _fallback();
     }
 
     try {
-      // 👈 CORRECTION : On convertit directement la ligne complète de la base de données
       final data = Map<String, dynamic>.from(row as Map);
       return SiteContent.fromJson(data);
     } catch (e, st) {
@@ -88,7 +101,7 @@ class ContentService {
         'error': e.toString(),
         'trace': st.toString(),
       });
-      return _fallback();
+      return _cached ?? _fallback();
     }
   }
 
@@ -100,6 +113,7 @@ class ContentService {
   void invalidateCache() {
     _cached = null;
     _cachedAt = null;
+    _inFlightRequest = null;
     _log('cache_invalidated');
   }
 

@@ -32,12 +32,7 @@ class _H {
 // ÉCHELLE TYPOGRAPHIQUE CENTRALISÉE
 // ═══════════════════════════════════════════════════════════════
 class _T {
-  static const eyebrow = TextStyle(
-    color: _H.muted,
-    fontSize: 12,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 2,
-  );
+  
   
   static TextStyle h1(bool desktop) => TextStyle(
         fontSize: desktop ? 44 : 32,

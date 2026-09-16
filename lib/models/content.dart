@@ -89,19 +89,24 @@ class SiteContent {
   factory SiteContent.empty() => const SiteContent();
   factory SiteContent.demo() => const SiteContent();
 
-  factory SiteContent.fromJson(Map<String, dynamic>? json) {
+    factory SiteContent.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const SiteContent();
 
     try {
-      final seo = json['seo'] as Map<String, dynamic>? ?? {};
-      final hero = json['hero'] as Map<String, dynamic>? ?? {};
-      final about = json['about'] as Map<String, dynamic>? ?? {};
-      final impact = json['impact'] as Map<String, dynamic>? ?? {};
-      final vision = json['vision'] as Map<String, dynamic>? ?? {};
-      final manager = json['manager'] as Map<String, dynamic>?;
-      final footer = json['footer'] as Map<String, dynamic>? ?? {};
-      final consent = json['consent'] as Map<String, dynamic>? ?? {};
-      final meta = json['meta'] as Map<String, dynamic>? ?? {};
+      // 👈 CORRECTION : Extraire la colonne 'data' si elle existe dans la ligne Supabase
+      final Map<String, dynamic> contentMap = (json['data'] is Map)
+          ? Map<String, dynamic>.from(json['data'] as Map)
+          : json;
+
+      final seo = contentMap['seo'] as Map<String, dynamic>? ?? {};
+      final hero = contentMap['hero'] as Map<String, dynamic>? ?? {};
+      final about = contentMap['about'] as Map<String, dynamic>? ?? {};
+      final impact = contentMap['impact'] as Map<String, dynamic>? ?? {};
+      final vision = contentMap['vision'] as Map<String, dynamic>? ?? {};
+      final manager = contentMap['manager'] as Map<String, dynamic>?;
+      final footer = contentMap['footer'] as Map<String, dynamic>? ?? {};
+      final consent = contentMap['consent'] as Map<String, dynamic>? ?? {};
+      final meta = contentMap['meta'] as Map<String, dynamic>? ?? {};
 
       return SiteContent(
         seoTitle: _safeString(seo['title'], defaultValue: '', maxLength: 80),
@@ -119,20 +124,20 @@ class SiteContent {
         aboutTitle: _safeString(about['title'], defaultValue: '', maxLength: 140),
         aboutText: _safeString(about['text'], defaultValue: '', maxLength: 1600),
         aboutImageUrl: _safeUrl(about['image_url']),
-        features: _parseFeatures(json['features']),
-        solutions: _parseSolutions(json['solutions']),
+        features: _parseFeatures(contentMap['features']),
+        solutions: _parseSolutions(contentMap['solutions']),
         stats: _parseStats(impact['stats']),
-        team: _parseTeam(json['team']),
-        gallery: _parseGallery(json['gallery']),
+        team: _parseTeam(contentMap['team']),
+        gallery: _parseGallery(contentMap['gallery']),
         impactQuote: _safeString(impact['quote'], defaultValue: '', maxLength: 400),
         visionText: _safeString(vision['text_bold'], defaultValue: '', maxLength: 1600),
         visionImageUrl: _safeUrl(vision['image_url']),
         visionImageAsset: _safeString(vision['image_asset'], defaultValue: null, maxLength: 200),
         
-        // CORRECTION : Lecture prioritaire des colonnes plates Supabase, avec fallback sur l'ancien map imbriqué
-        managerName: _safeString(json['manager_name'] ?? manager?['name'], defaultValue: '', maxLength: 100),
-        managerMessage: _safeString(json['manager_message'] ?? manager?['message'], defaultValue: '', maxLength: 600),
-        managerPhotoUrl: _safeUrl(json['manager_photo_url'] ?? manager?['photo_url']),
+        // 👈 Lecture hybride : vérifie la colonne plate en priorité, puis la colonne 'data'
+        managerName: _safeString(json['manager_name'] ?? contentMap['manager_name'] ?? manager?['name'], defaultValue: '', maxLength: 100),
+        managerMessage: _safeString(json['manager_message'] ?? contentMap['manager_message'] ?? manager?['message'], defaultValue: '', maxLength: 600),
+        managerPhotoUrl: _safeUrl(json['manager_photo_url'] ?? contentMap['manager_photo_url'] ?? manager?['photo_url']),
         
         consentText: _safeString(consent['text'], defaultValue: '', maxLength: 600),
         footerLegal: _safeString(footer['legal'], defaultValue: '', maxLength: 1200),
@@ -144,6 +149,7 @@ class SiteContent {
       return const SiteContent();
     }
   }
+
 
   Map<String, dynamic> toJson() {
     return {

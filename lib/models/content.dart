@@ -98,7 +98,7 @@ class SiteContent {
       final about = json['about'] as Map<String, dynamic>? ?? {};
       final impact = json['impact'] as Map<String, dynamic>? ?? {};
       final vision = json['vision'] as Map<String, dynamic>? ?? {};
-      final manager = json['manager'] as Map<String, dynamic>? ?? {};
+      final manager = json['manager'] as Map<String, dynamic>?;
       final footer = json['footer'] as Map<String, dynamic>? ?? {};
       final consent = json['consent'] as Map<String, dynamic>? ?? {};
       final meta = json['meta'] as Map<String, dynamic>? ?? {};
@@ -128,9 +128,12 @@ class SiteContent {
         visionText: _safeString(vision['text_bold'], defaultValue: '', maxLength: 1600),
         visionImageUrl: _safeUrl(vision['image_url']),
         visionImageAsset: _safeString(vision['image_asset'], defaultValue: null, maxLength: 200),
-        managerName: _safeString(manager['name'], defaultValue: '', maxLength: 100),
-        managerMessage: _safeString(manager['message'], defaultValue: '', maxLength: 600),
-        managerPhotoUrl: _safeUrl(manager['photo_url']),
+        
+        // CORRECTION : Lecture prioritaire des colonnes plates Supabase, avec fallback sur l'ancien map imbriqué
+        managerName: _safeString(json['manager_name'] ?? manager?['name'], defaultValue: '', maxLength: 100),
+        managerMessage: _safeString(json['manager_message'] ?? manager?['message'], defaultValue: '', maxLength: 600),
+        managerPhotoUrl: _safeUrl(json['manager_photo_url'] ?? manager?['photo_url']),
+        
         consentText: _safeString(consent['text'], defaultValue: '', maxLength: 600),
         footerLegal: _safeString(footer['legal'], defaultValue: '', maxLength: 1200),
         version: meta['version'] is int ? meta['version'] as int : 1,
@@ -180,11 +183,12 @@ class SiteContent {
         'image_url': visionImageUrl,
         'image_asset': visionImageAsset,
       },
-      'manager': {
-        'name': managerName,
-        'message': managerMessage,
-        'photo_url': managerPhotoUrl,
-      },
+      
+      // CORRECTION : Envoi direct aux nom des colonnes plates Supabase
+      'manager_name': managerName,
+      'manager_message': managerMessage,
+      'manager_photo_url': managerPhotoUrl,
+
       'consent': {
         'text': consentText,
       },
@@ -475,10 +479,9 @@ class SiteContent {
 }
 
 // =========================================================================
-// CLASSES AUXILIAIRES (AU NIVEAU SUPÉRIEUR)
+// CLASSES AUXILIAIRES
 // =========================================================================
 
-/// Feature (caractéristique produit/service).
 @immutable
 class Feature {
   final String title;
@@ -516,7 +519,6 @@ class Feature {
   int get hashCode => Object.hash(title, text, icon);
 }
 
-/// Solution (offre commerciale).
 @immutable
 class Solution {
   final String title;
@@ -557,7 +559,6 @@ class Solution {
   int get hashCode => Object.hash(title, subtitle, featured);
 }
 
-/// Stat (chiffre clé).
 @immutable
 class Stat {
   final String value;
@@ -586,7 +587,6 @@ class Stat {
   int get hashCode => Object.hash(value, label);
 }
 
-/// Membre de l'équipe (section "Notre équipe").
 @immutable
 class TeamMember {
   final String name;
@@ -621,7 +621,6 @@ class TeamMember {
   int get hashCode => Object.hash(name, role, photoUrl);
 }
 
-/// Élément de la galerie photo.
 @immutable
 class GalleryItem {
   final String url;

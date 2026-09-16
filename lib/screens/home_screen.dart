@@ -27,13 +27,7 @@ class _H {
 
 // ✅ NOUVEAU : échelle typographique centralisée, pour une lisibilité
 // cohérente sur tout le site (au lieu de tailles ad hoc dispersées).
-class _T {
-  static const eyebrow = TextStyle(
-    color: _H.muted,
-    fontSize: 12,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 2,
-  );
+
   static TextStyle h1(bool desktop) => TextStyle(
         fontSize: desktop ? 44 : 32,
         fontWeight: FontWeight.w800,

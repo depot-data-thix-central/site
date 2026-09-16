@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:js_interop';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:web/web.dart' as web;
 
 import '../models/content.dart';
 import '../services/content_service.dart';
@@ -103,7 +105,7 @@ class _AdminScreenState extends State<AdminScreen> {
   bool _loading = true;
   Object? _error;
   _PublishState _publishState = _PublishState.draft;
-  
+
   // Variables pour l'upload d'images
   final Set<String> _uploading = {};
 
@@ -133,7 +135,7 @@ class _AdminScreenState extends State<AdminScreen> {
     for (final k in _imageKeys) {
       _images[k] = TextEditingController();
     }
-    
+
     // Vérifier s'il y a déjà une session active au démarrage
     _checkExistingSession();
   }
@@ -154,7 +156,7 @@ class _AdminScreenState extends State<AdminScreen> {
   // ── Auth ─────────────────────────────────────────────────────
   Future<void> _checkExistingSession() async {
     final session = Supabase.instance.client.auth.currentSession;
-    
+
     if (session != null) {
       try {
         final profile = await Supabase.instance.client
@@ -162,7 +164,7 @@ class _AdminScreenState extends State<AdminScreen> {
             .select('role')
             .eq('id', session.user.id)
             .maybeSingle();
-            
+
         if (profile != null && profile['role'] != 'admin') {
           await Supabase.instance.client.auth.signOut();
           return;
@@ -235,27 +237,31 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   // ── Upload ───────────────────────────────────────────────────
-    Future<String?> _uploadToSupabase(String folder) async {
+  //
+  // ✅ CORRECTIF : l'ancienne implémentation utilisait `image_picker`, dont
+  // la variante web (`image_picker_for_web`) crée en interne une URL blob
+  // pour représenter le fichier sélectionné. Sur mobile (Chrome/Safari),
+  // ce package réutilise un unique <input> caché entre les appels, et
+  // l'URL blob se fait révoquer avant que `readAsBytes()` ait fini sa
+  // lecture — d'où l'erreur "Could not load Blob from its URL. Has it
+  // been revoked?". C'est un bug documenté du package sur web mobile.
+  //
+  // La correction recommandée par l'équipe Flutter est de contourner
+  // entièrement ce mécanisme : on crée notre propre <input type="file">
+  // et on lit les octets via FileReader.readAsArrayBuffer(), qui ne
+  // passe jamais par une URL blob révocable.
+  Future<String?> _uploadToSupabase(String folder) async {
     try {
-      final picker = ImagePicker();
-      
-      // ❌ L'ERREUR VENAIT D'ICI : On retire `imageQuality: 80`
-      // Sur Flutter Web mobile, la tentative de compression révoque le Blob.
-      final xfile = await picker.pickImage(source: ImageSource.gallery);
-      
-      if (xfile == null) return null;
+      final bytesAndName = await _pickImageBytesFromBrowser();
+      if (bytesAndName == null) return null;
+      final (bytes, name) = bytesAndName;
 
-      // Lecture des bytes bruts
-      final bytes = await xfile.readAsBytes();
-      
-      // Extraction de l'extension (avec fallback sur png si introuvable sur le web)
-      final ext = xfile.name.split('.').last.toLowerCase();
+      final ext = name.contains('.') ? name.split('.').last.toLowerCase() : 'png';
       final validExt = ['png', 'jpg', 'jpeg', 'webp', 'gif'].contains(ext) ? ext : 'png';
-      
+
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.$validExt';
       final path = '$folder/$fileName';
 
-      // Upload binaire vers Supabase
       await Supabase.instance.client.storage.from('images').uploadBinary(
         path,
         bytes,
@@ -273,6 +279,60 @@ class _AdminScreenState extends State<AdminScreen> {
     }
   }
 
+  /// Ouvre le sélecteur de fichier natif du navigateur et lit les octets
+  /// du fichier choisi directement en mémoire (jamais via une URL blob).
+  /// Retourne `(bytes, nomDuFichier)` ou `null` si l'utilisateur annule.
+  Future<(Uint8List, String)?> _pickImageBytesFromBrowser() async {
+    final input = web.HTMLInputElement()
+      ..type = 'file'
+      ..accept = 'image/*';
+
+    final changeCompleter = Completer<void>();
+    input.addEventListener(
+      'change',
+      (web.Event _) {
+        if (!changeCompleter.isCompleted) changeCompleter.complete();
+      }.toJS,
+    );
+    // Si l'utilisateur ferme la boîte de dialogue sans choisir de fichier,
+    // 'cancel' n'est pas toujours fiable sur tous les navigateurs — on ne
+    // bloque donc pas indéfiniment : voir le timeout plus bas.
+    input.click();
+
+    await changeCompleter.future.timeout(
+      const Duration(minutes: 5),
+      onTimeout: () {},
+    );
+
+    final files = input.files;
+    if (files == null || files.length == 0) return null;
+    final file = files.item(0);
+    if (file == null) return null;
+
+    final reader = web.FileReader();
+    final loadCompleter = Completer<void>();
+    reader.addEventListener(
+      'load',
+      (web.Event _) {
+        if (!loadCompleter.isCompleted) loadCompleter.complete();
+      }.toJS,
+    );
+    reader.addEventListener(
+      'error',
+      (web.Event _) {
+        if (!loadCompleter.isCompleted) {
+          loadCompleter.completeError(Exception('Lecture du fichier échouée'));
+        }
+      }.toJS,
+    );
+    reader.readAsArrayBuffer(file);
+    await loadCompleter.future;
+
+    final buffer = reader.result as JSArrayBuffer;
+    final bytes = buffer.toDart.asUint8List();
+
+    return (bytes, file.name);
+  }
 
   // ── Data ─────────────────────────────────────────────────────
   Future<void> _loadContent() async {
@@ -296,8 +356,8 @@ class _AdminScreenState extends State<AdminScreen> {
       _text['ctaPrimary']?.text = content.ctaPrimary;
       _text['ctaSecondary']?.text = content.ctaSecondary;
       _images['heroImageUrl']?.text = content.heroImageUrl ?? '';
-      
-      // Les lignes ci-dessous sont commentées pour éviter les erreurs 
+
+      // Les lignes ci-dessous sont commentées pour éviter les erreurs
       // si votre modèle SiteContent n'a pas encore ces propriétés.
       // _text['managerName']?.text = content.managerName ?? '';
       // _text['managerMessage']?.text = content.managerMessage ?? '';
@@ -348,7 +408,7 @@ class _AdminScreenState extends State<AdminScreen> {
         ctaPrimary: _text['ctaPrimary']?.text ?? '',
         ctaSecondary: _text['ctaSecondary']?.text ?? '',
         heroImageUrl: _httpsOrNull(_images['heroImageUrl']?.text),
-        
+
         // managerName: _text['managerName']?.text ?? '',
         // managerMessage: _text['managerMessage']?.text ?? '',
         // managerPhotoUrl: _httpsOrNull(_images['managerPhotoUrl']?.text),
@@ -451,7 +511,7 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  Widget _buildLogin() { 
+  Widget _buildLogin() {
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -811,7 +871,7 @@ class _AdminScreenState extends State<AdminScreen> {
         _field('seoKeywords', 'Mots-clés'),
         _imageUploadField('seoOgImage', 'Image Open Graph (SEO)', 'seo'),
         const SizedBox(height: 28),
-        
+
         _sectionTitle('Hero'),
         _field('heroTitle', 'Titre principal'),
         _field('heroHighlight', 'Mise en avant'),

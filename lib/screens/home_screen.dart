@@ -28,6 +28,17 @@ class _H {
 // ✅ NOUVEAU : échelle typographique centralisée, pour une lisibilité
 // cohérente sur tout le site (au lieu de tailles ad hoc dispersées).
 
+  // ═══════════════════════════════════════════════════════════════
+// ÉCHELLE TYPOGRAPHIQUE CENTRALISÉE
+// ═══════════════════════════════════════════════════════════════
+class _T {
+  static const eyebrow = TextStyle(
+    color: _H.muted,
+    fontSize: 12,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 2,
+  );
+  
   static TextStyle h1(bool desktop) => TextStyle(
         fontSize: desktop ? 44 : 32,
         fontWeight: FontWeight.w800,
@@ -35,6 +46,7 @@ class _H {
         color: _H.ink,
         letterSpacing: -0.9,
       );
+      
   static TextStyle h2(bool desktop) => TextStyle(
         fontSize: desktop ? 30 : 24,
         fontWeight: FontWeight.w800,
@@ -42,14 +54,17 @@ class _H {
         color: _H.ink,
         letterSpacing: -0.5,
       );
+      
   static const h3 = TextStyle(
     fontSize: 17,
     fontWeight: FontWeight.w800,
     color: _H.ink,
     height: 1.3,
   );
+  
   static const body = TextStyle(fontSize: 15.5, height: 1.7, color: _H.muted);
   static const bodySmall = TextStyle(fontSize: 13.5, height: 1.6, color: _H.muted);
+  
   static const label = TextStyle(
     fontSize: 12.5,
     fontWeight: FontWeight.w700,

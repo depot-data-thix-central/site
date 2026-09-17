@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:js_interop';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -20,6 +21,15 @@ class _A {
   static const border = Color(0xFFE2E8F0);
   static const danger = Color(0xFFB91C1C);
   static const success = Color(0xFF16A34A);
+}
+
+void _log(String event, [Map<String, Object?>? ctx]) {
+  if (!kDebugMode) return;
+  final buffer = StringBuffer('[Admin] $event');
+  if (ctx != null && ctx.isNotEmpty) {
+    buffer.write(' | ${ctx.entries.map((e) => '${e.key}=${e.value}').join(', ')}');
+  }
+  debugPrint(buffer.toString());
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -63,9 +73,37 @@ class _EditableStat {
   Stat toModel() => Stat(value: value, label: label);
 }
 
+// ✅ NOUVEAU
+class _EditableTeamMember {
+  String name, role;
+  String? bio;
+  String? photoUrl;
+  _EditableTeamMember({required this.name, required this.role, this.bio, this.photoUrl});
+  factory _EditableTeamMember.fromModel(TeamMember m) =>
+      _EditableTeamMember(name: m.name, role: m.role, bio: m.bio, photoUrl: m.photoUrl);
+  TeamMember toModel() => TeamMember(name: name, role: role, bio: bio, photoUrl: photoUrl);
+}
+
+// ✅ NOUVEAU
+class _EditableGalleryItem {
+  String url;
+  String? caption;
+  _EditableGalleryItem({required this.url, this.caption});
+  factory _EditableGalleryItem.fromModel(GalleryItem g) =>
+      _EditableGalleryItem(url: g.url, caption: g.caption);
+  GalleryItem? toModel() {
+    final u = url.trim();
+    if (u.isEmpty) return null;
+    return GalleryItem(url: u, caption: caption);
+  }
+}
+
 enum _AdminTab {
   dashboard('Dashboard', Icons.space_dashboard_rounded),
   content('Contenu', Icons.edit_note_rounded),
+  about('À propos', Icons.info_outline_rounded),
+  team('Équipe', Icons.groups_rounded),
+  gallery('Galerie', Icons.photo_library_rounded),
   features('Features', Icons.extension_rounded),
   solutions('Solutions', Icons.lightbulb_outline_rounded),
   stats('Stats', Icons.bar_chart_rounded),
@@ -115,15 +153,18 @@ class _AdminScreenState extends State<AdminScreen> {
   final List<_EditableFeature> _features = [];
   final List<_EditableSolution> _solutions = [];
   final List<_EditableStat> _stats = [];
+  final List<_EditableTeamMember> _team = [];
+  final List<_EditableGalleryItem> _gallery = [];
 
   static const _scalarKeys = [
     'seoTitle', 'seoDescription', 'seoKeywords', 'seoCanonicalUrl',
     'heroTitle', 'heroHighlight', 'heroParagraph', 'ctaPrimary', 'ctaSecondary',
+    'aboutTitle', 'aboutText',
     'managerName', 'managerMessage',
     'impactQuote', 'visionText', 'consentText', 'footerLegal',
   ];
   static const _imageKeys = [
-    'seoOgImage', 'heroImageUrl', 'visionImageUrl', 'managerPhotoUrl'
+    'seoOgImage', 'heroImageUrl', 'aboutImageUrl', 'visionImageUrl', 'managerPhotoUrl'
   ];
 
   @override
@@ -136,12 +177,14 @@ class _AdminScreenState extends State<AdminScreen> {
       _images[k] = TextEditingController();
     }
 
+    _log('init');
     // Vérifier s'il y a déjà une session active au démarrage
     _checkExistingSession();
   }
 
   @override
   void dispose() {
+    _log('dispose');
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     for (final c in _text.values) {
@@ -156,6 +199,7 @@ class _AdminScreenState extends State<AdminScreen> {
   // ── Auth ─────────────────────────────────────────────────────
   Future<void> _checkExistingSession() async {
     final session = Supabase.instance.client.auth.currentSession;
+    _log('checkExistingSession', {'hasSession': session != null});
 
     if (session != null) {
       try {
@@ -165,27 +209,36 @@ class _AdminScreenState extends State<AdminScreen> {
             .eq('id', session.user.id)
             .maybeSingle();
 
+        _log('checkExistingSession.profile', {'role': profile?['role']});
+
         if (profile != null && profile['role'] != 'admin') {
+          _log('checkExistingSession.notAdmin -> signOut');
           await Supabase.instance.client.auth.signOut();
           return;
         }
 
         if (mounted) {
           setState(() => _authenticated = true);
+          _log('checkExistingSession.authenticated');
           await _loadContent();
         }
-      } catch (_) {
+      } catch (e) {
+        _log('checkExistingSession.error', {'error': '$e'});
         // En cas d'erreur de vérification, on reste sur l'écran de login
       }
     }
   }
 
   Future<void> _login() async {
-    if (!(_authFormKey.currentState?.validate() ?? false)) return;
+    if (!(_authFormKey.currentState?.validate() ?? false)) {
+      _log('login.validationFailed');
+      return;
+    }
     setState(() {
       _authLoading = true;
       _authError = null;
     });
+    _log('login.attempt', {'email': _emailCtrl.text.trim()});
 
     try {
       final res = await Supabase.instance.client.auth.signInWithPassword(
@@ -193,6 +246,7 @@ class _AdminScreenState extends State<AdminScreen> {
         password: _passwordCtrl.text,
       );
       if (res.user == null) throw Exception('no user');
+      _log('login.signInOk', {'userId': res.user!.id});
 
       try {
         final profile = await Supabase.instance.client
@@ -200,16 +254,22 @@ class _AdminScreenState extends State<AdminScreen> {
             .select('role')
             .eq('id', res.user!.id)
             .maybeSingle();
+        _log('login.profileRole', {'role': profile?['role']});
         if (profile != null && profile['role'] != 'admin') {
+          _log('login.notAdmin -> signOut');
           await Supabase.instance.client.auth.signOut();
           throw Exception('not admin');
         }
-      } catch (_) {}
+      } catch (e) {
+        _log('login.profileCheckError', {'error': '$e'});
+      }
 
       if (!mounted) return;
       setState(() => _authenticated = true);
+      _log('login.success');
       await _loadContent();
-    } catch (_) {
+    } catch (e) {
+      _log('login.failed', {'error': '$e'});
       if (!mounted) return;
       setState(() {
         _authLoading = false;
@@ -222,9 +282,12 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   Future<void> _logout({String? reason}) async {
+    _log('logout', {'reason': reason});
     try {
       await Supabase.instance.client.auth.signOut();
-    } catch (_) {}
+    } catch (e) {
+      _log('logout.signOutError', {'error': '$e'});
+    }
     if (!mounted) return;
     setState(() {
       _authenticated = false;
@@ -251,10 +314,15 @@ class _AdminScreenState extends State<AdminScreen> {
   // et on lit les octets via FileReader.readAsArrayBuffer(), qui ne
   // passe jamais par une URL blob révocable.
   Future<String?> _uploadToSupabase(String folder) async {
+    _log('upload.start', {'folder': folder});
     try {
       final bytesAndName = await _pickImageBytesFromBrowser();
-      if (bytesAndName == null) return null;
+      if (bytesAndName == null) {
+        _log('upload.cancelled', {'folder': folder});
+        return null;
+      }
       final (bytes, name) = bytesAndName;
+      _log('upload.filePicked', {'name': name, 'bytes': bytes.length});
 
       final ext = name.contains('.') ? name.split('.').last.toLowerCase() : 'png';
       final validExt = ['png', 'jpg', 'jpeg', 'webp', 'gif'].contains(ext) ? ext : 'png';
@@ -267,9 +335,13 @@ class _AdminScreenState extends State<AdminScreen> {
         bytes,
         fileOptions: FileOptions(contentType: 'image/$validExt'),
       );
+      _log('upload.storageOk', {'path': path});
 
-      return Supabase.instance.client.storage.from('images').getPublicUrl(path);
+      final url = Supabase.instance.client.storage.from('images').getPublicUrl(path);
+      _log('upload.publicUrl', {'url': url});
+      return url;
     } catch (e) {
+      _log('upload.error', {'folder': folder, 'error': '$e'});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erreur d\'upload : $e'), backgroundColor: _A.danger),
@@ -298,16 +370,25 @@ class _AdminScreenState extends State<AdminScreen> {
     // 'cancel' n'est pas toujours fiable sur tous les navigateurs — on ne
     // bloque donc pas indéfiniment : voir le timeout plus bas.
     input.click();
+    _log('picker.opened');
 
     await changeCompleter.future.timeout(
       const Duration(minutes: 5),
-      onTimeout: () {},
+      onTimeout: () {
+        _log('picker.timeout');
+      },
     );
 
     final files = input.files;
-    if (files == null || files.length == 0) return null;
+    if (files == null || files.length == 0) {
+      _log('picker.noFile');
+      return null;
+    }
     final file = files.item(0);
-    if (file == null) return null;
+    if (file == null) {
+      _log('picker.nullFile');
+      return null;
+    }
 
     final reader = web.FileReader();
     final loadCompleter = Completer<void>();
@@ -330,12 +411,14 @@ class _AdminScreenState extends State<AdminScreen> {
 
     final buffer = reader.result as JSArrayBuffer;
     final bytes = buffer.toDart.asUint8List();
+    _log('picker.readOk', {'name': file.name, 'bytes': bytes.length});
 
     return (bytes, file.name);
   }
 
   // ── Data ─────────────────────────────────────────────────────
   Future<void> _loadContent() async {
+    _log('loadContent.start');
     setState(() {
       _loading = true;
       _error = null;
@@ -344,6 +427,14 @@ class _AdminScreenState extends State<AdminScreen> {
       final content = await _contentService.loadPublished();
       if (!mounted) return;
       _original = content;
+      _log('loadContent.fetched', {
+        'features': content.features.length,
+        'solutions': content.solutions.length,
+        'stats': content.stats.length,
+        'team': content.team.length,
+        'gallery': content.gallery.length,
+        'version': content.version,
+      });
 
       _text['seoTitle']?.text = content.seoTitle;
       _text['seoDescription']?.text = content.seoDescription;
@@ -357,11 +448,13 @@ class _AdminScreenState extends State<AdminScreen> {
       _text['ctaSecondary']?.text = content.ctaSecondary;
       _images['heroImageUrl']?.text = content.heroImageUrl ?? '';
 
-      // Les lignes ci-dessous sont commentées pour éviter les erreurs
-      // si votre modèle SiteContent n'a pas encore ces propriétés.
-      // _text['managerName']?.text = content.managerName ?? '';
-      // _text['managerMessage']?.text = content.managerMessage ?? '';
-      // _images['managerPhotoUrl']?.text = content.managerPhotoUrl ?? '';
+      _text['aboutTitle']?.text = content.aboutTitle;
+      _text['aboutText']?.text = content.aboutText;
+      _images['aboutImageUrl']?.text = content.aboutImageUrl ?? '';
+
+      _text['managerName']?.text = content.managerName;
+      _text['managerMessage']?.text = content.managerMessage;
+      _images['managerPhotoUrl']?.text = content.managerPhotoUrl ?? '';
 
       _text['impactQuote']?.text = content.impactQuote;
       _text['visionText']?.text = content.visionText;
@@ -378,12 +471,20 @@ class _AdminScreenState extends State<AdminScreen> {
       _stats
         ..clear()
         ..addAll(content.stats.map(_EditableStat.fromModel));
+      _team
+        ..clear()
+        ..addAll(content.team.map(_EditableTeamMember.fromModel));
+      _gallery
+        ..clear()
+        ..addAll(content.gallery.map(_EditableGalleryItem.fromModel));
 
       setState(() {
         _loading = false;
         _publishState = _PublishState.published;
       });
+      _log('loadContent.done');
     } catch (e) {
+      _log('loadContent.error', {'error': '$e'});
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -393,9 +494,14 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   Future<void> _save({required bool publish}) async {
+    _log('save.start', {'publish': publish});
     setState(() => _publishState = _PublishState.publishing);
 
     try {
+      final teamModels = _team.map((e) => e.toModel()).toList();
+      final galleryModels =
+          _gallery.map((e) => e.toModel()).whereType<GalleryItem>().toList();
+
       final newContent = SiteContent(
         seoTitle: _text['seoTitle']?.text ?? '',
         seoDescription: _text['seoDescription']?.text ?? '',
@@ -409,13 +515,19 @@ class _AdminScreenState extends State<AdminScreen> {
         ctaSecondary: _text['ctaSecondary']?.text ?? '',
         heroImageUrl: _httpsOrNull(_images['heroImageUrl']?.text),
 
-        // managerName: _text['managerName']?.text ?? '',
-        // managerMessage: _text['managerMessage']?.text ?? '',
-        // managerPhotoUrl: _httpsOrNull(_images['managerPhotoUrl']?.text),
+        aboutTitle: _text['aboutTitle']?.text ?? '',
+        aboutText: _text['aboutText']?.text ?? '',
+        aboutImageUrl: _httpsOrNull(_images['aboutImageUrl']?.text),
+
+        managerName: _text['managerName']?.text ?? '',
+        managerMessage: _text['managerMessage']?.text ?? '',
+        managerPhotoUrl: _httpsOrNull(_images['managerPhotoUrl']?.text),
 
         features: _features.map((e) => e.toModel()).toList(),
         solutions: _solutions.map((e) => e.toModel()).toList(),
         stats: _stats.map((e) => e.toModel()).toList(),
+        team: teamModels,
+        gallery: galleryModels,
         impactQuote: _text['impactQuote']?.text ?? '',
         visionText: _text['visionText']?.text ?? '',
         visionImageUrl: _httpsOrNull(_images['visionImageUrl']?.text),
@@ -425,24 +537,36 @@ class _AdminScreenState extends State<AdminScreen> {
         lastUpdated: DateTime.now(),
       );
 
+      _log('save.payloadBuilt', {
+        'features': newContent.features.length,
+        'solutions': newContent.solutions.length,
+        'stats': newContent.stats.length,
+        'team': newContent.team.length,
+        'gallery': newContent.gallery.length,
+        'version': newContent.version,
+      });
+
       final client = Supabase.instance.client;
       await client.from('content_published').upsert({
         'id': 1,
         'data': newContent.toJson(),
         'published_at': DateTime.now().toIso8601String(),
       });
+      _log('save.publishedUpsertOk');
 
       await client.from('content_draft').upsert({
         'id': 1,
         'data': newContent.toJson(),
         'updated_at': DateTime.now().toIso8601String(),
       });
+      _log('save.draftUpsertOk');
 
       if (!mounted) return;
       setState(() {
         _original = newContent;
         _publishState = publish ? _PublishState.published : _PublishState.draft;
       });
+      _log('save.success', {'publish': publish});
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(publish ? 'Contenu publié.' : 'Brouillon enregistré.'),
@@ -450,6 +574,7 @@ class _AdminScreenState extends State<AdminScreen> {
         ),
       );
     } catch (e) {
+      _log('save.error', {'error': '$e'});
       if (!mounted) return;
       setState(() => _publishState = _PublishState.error);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -470,6 +595,7 @@ class _AdminScreenState extends State<AdminScreen> {
   void _markDirty() {
     if (_publishState == _PublishState.published) {
       setState(() => _publishState = _PublishState.draft);
+      _log('markDirty');
     }
   }
 
@@ -684,7 +810,10 @@ class _AdminScreenState extends State<AdminScreen> {
               color: selected ? _A.ink : _A.muted,
             ),
           ),
-          onTap: () => setState(() => _tab = tab),
+          onTap: () {
+            _log('nav.tabTap', {'tab': tab.name});
+            setState(() => _tab = tab);
+          },
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
@@ -738,6 +867,7 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   void _openDrawer() {
+    _log('drawer.open');
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: _A.surface,
@@ -751,6 +881,7 @@ class _AdminScreenState extends State<AdminScreen> {
                 title: Text(t.label, style: const TextStyle(fontWeight: FontWeight.w600, color: _A.ink)),
                 onTap: () {
                   Navigator.pop(ctx);
+                  _log('drawer.tabTap', {'tab': t.name});
                   setState(() => _tab = t);
                 },
               ),
@@ -796,6 +927,12 @@ class _AdminScreenState extends State<AdminScreen> {
         return _dashboard();
       case _AdminTab.content:
         return _contentEditor();
+      case _AdminTab.about:
+        return _aboutEditor();
+      case _AdminTab.team:
+        return _teamEditor();
+      case _AdminTab.gallery:
+        return _galleryEditor();
       case _AdminTab.features:
         return _featuresEditor();
       case _AdminTab.solutions:
@@ -821,6 +958,8 @@ class _AdminScreenState extends State<AdminScreen> {
             _statCard('Features', '${_features.length}', Icons.extension_rounded),
             _statCard('Solutions', '${_solutions.length}', Icons.lightbulb_outline_rounded),
             _statCard('Stats', '${_stats.length}', Icons.bar_chart_rounded),
+            _statCard('Équipe', '${_team.length}', Icons.groups_rounded),
+            _statCard('Galerie', '${_gallery.length}', Icons.photo_library_rounded),
             _statCard(
               'Statut',
               _publishState == _PublishState.published ? 'Publié' : 'Brouillon',
@@ -881,7 +1020,6 @@ class _AdminScreenState extends State<AdminScreen> {
         _field('ctaSecondary', 'Bouton secondaire'),
         const SizedBox(height: 28),
 
-        // ── SECTION MANAGER ──
         _sectionTitle('Mot du Manager'),
         _field('managerName', 'Nom du manager'),
         _field('managerMessage', 'Message du manager', maxLines: 5),
@@ -902,6 +1040,150 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
+  // ── ✅ NOUVEAU : Éditeur "À propos" ──────────────────────────────
+  Widget _aboutEditor() {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        _sectionTitle('À propos de SONATHIX GROUP'),
+        _field('aboutTitle', 'Titre de la section'),
+        _field('aboutText', 'Texte de présentation', maxLines: 8),
+        _imageUploadField('aboutImageUrl', 'Image de la section À propos', 'about'),
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+
+  // ── ✅ NOUVEAU : Éditeur "Équipe" ────────────────────────────────
+  Widget _teamEditor() {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        Row(
+          children: [
+            const Text('Équipe', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: _A.ink)),
+            const Spacer(),
+            FilledButton.icon(
+              onPressed: () => setState(() {
+                _team.add(_EditableTeamMember(name: 'Nouveau membre', role: ''));
+                _log('team.add', {'count': _team.length});
+                _markDirty();
+              }),
+              style: FilledButton.styleFrom(backgroundColor: _A.ink),
+              icon: const Icon(Icons.add),
+              label: const Text('Ajouter'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (_team.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(32),
+            child: Center(child: Text('Aucun membre.', style: TextStyle(color: _A.muted))),
+          ),
+        for (var i = 0; i < _team.length; i++) _teamCard(i),
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+
+  Widget _teamCard(int i) {
+    final item = _team[i];
+    return _editorCard(
+      title: 'Membre #${i + 1}',
+      onDelete: () => setState(() {
+        _log('team.remove', {'index': i});
+        _team.removeAt(i);
+        _markDirty();
+      }),
+      children: [
+        _inlineField('Nom', item.name, (v) {
+          item.name = v;
+          _markDirty();
+        }),
+        _inlineField('Rôle / Fonction', item.role, (v) {
+          item.role = v;
+          _markDirty();
+        }),
+        _inlineField('Bio (optionnel)', item.bio ?? '', (v) {
+          item.bio = v.isEmpty ? null : v;
+          _markDirty();
+        }, maxLines: 3),
+        _collectionImageUploadField(
+          'Photo du membre',
+          item.photoUrl,
+          (v) => setState(() {
+            item.photoUrl = v.isEmpty ? null : v;
+            _markDirty();
+          }),
+          'team_$i',
+          'team',
+        ),
+      ],
+    );
+  }
+
+  // ── ✅ NOUVEAU : Éditeur "Galerie" ───────────────────────────────
+  Widget _galleryEditor() {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        Row(
+          children: [
+            const Text('Galerie', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: _A.ink)),
+            const Spacer(),
+            FilledButton.icon(
+              onPressed: () => setState(() {
+                _gallery.add(_EditableGalleryItem(url: ''));
+                _log('gallery.add', {'count': _gallery.length});
+                _markDirty();
+              }),
+              style: FilledButton.styleFrom(backgroundColor: _A.ink),
+              icon: const Icon(Icons.add),
+              label: const Text('Ajouter'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (_gallery.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(32),
+            child: Center(child: Text('Aucune image.', style: TextStyle(color: _A.muted))),
+          ),
+        for (var i = 0; i < _gallery.length; i++) _galleryCard(i),
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+
+  Widget _galleryCard(int i) {
+    final item = _gallery[i];
+    return _editorCard(
+      title: 'Image #${i + 1}',
+      onDelete: () => setState(() {
+        _log('gallery.remove', {'index': i});
+        _gallery.removeAt(i);
+        _markDirty();
+      }),
+      children: [
+        _collectionImageUploadField(
+          'Image',
+          item.url.isEmpty ? null : item.url,
+          (v) => setState(() {
+            item.url = v;
+            _markDirty();
+          }),
+          'gallery_$i',
+          'gallery',
+        ),
+        _inlineField('Légende (optionnel)', item.caption ?? '', (v) {
+          item.caption = v.isEmpty ? null : v;
+          _markDirty();
+        }),
+      ],
+    );
+  }
+
   Widget _featuresEditor() {
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -913,6 +1195,7 @@ class _AdminScreenState extends State<AdminScreen> {
             FilledButton.icon(
               onPressed: () => setState(() {
                 _features.add(_EditableFeature(title: 'Nouvelle feature', text: '', icon: 'star'));
+                _log('features.add', {'count': _features.length});
                 _markDirty();
               }),
               style: FilledButton.styleFrom(backgroundColor: _A.ink),
@@ -938,6 +1221,7 @@ class _AdminScreenState extends State<AdminScreen> {
     return _editorCard(
       title: 'Feature #${i + 1}',
       onDelete: () => setState(() {
+        _log('features.remove', {'index': i});
         _features.removeAt(i);
         _markDirty();
       }),
@@ -981,6 +1265,7 @@ class _AdminScreenState extends State<AdminScreen> {
                 _solutions.add(
                   _EditableSolution(title: 'Nouvelle solution', subtitle: '', text: ''),
                 );
+                _log('solutions.add', {'count': _solutions.length});
                 _markDirty();
               }),
               style: FilledButton.styleFrom(backgroundColor: _A.ink),
@@ -1006,6 +1291,7 @@ class _AdminScreenState extends State<AdminScreen> {
     return _editorCard(
       title: 'Solution #${i + 1}',
       onDelete: () => setState(() {
+        _log('solutions.remove', {'index': i});
         _solutions.removeAt(i);
         _markDirty();
       }),
@@ -1018,6 +1304,7 @@ class _AdminScreenState extends State<AdminScreen> {
             activeThumbColor: _A.ink,
             onChanged: (v) => setState(() {
               item.featured = v;
+              _log('solutions.featuredToggle', {'index': i, 'featured': v});
               _markDirty();
             }),
           ),
@@ -1061,6 +1348,7 @@ class _AdminScreenState extends State<AdminScreen> {
             FilledButton.icon(
               onPressed: () => setState(() {
                 _stats.add(_EditableStat(value: '0', label: 'Nouvelle stat'));
+                _log('stats.add', {'count': _stats.length});
                 _markDirty();
               }),
               style: FilledButton.styleFrom(backgroundColor: _A.ink),
@@ -1121,6 +1409,7 @@ class _AdminScreenState extends State<AdminScreen> {
             IconButton(
               icon: const Icon(Icons.delete_outline, color: _A.danger),
               onPressed: () => setState(() {
+                _log('stats.remove', {'index': i});
                 _stats.removeAt(i);
                 _markDirty();
               }),
@@ -1260,7 +1549,7 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // Uploader pour les collections (Features et Solutions)
+  // Uploader pour les collections (Features, Solutions, Équipe, Galerie)
   Widget _collectionImageUploadField(String label, String? currentUrl, ValueChanged<String> onChanged, String uploadKey, String folder) {
     // On extrait l'URL en variable non-nullable locale pour éviter l'utilisation de "!"
     final url = currentUrl?.trim() ?? '';

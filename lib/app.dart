@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-
 import 'screens/home_screen.dart';
 import 'screens/admin_screen.dart';
+import 'screens/legal_screen.dart'; // ✅ AJOUTER CETTE LIGNE
 
 class SonathixApp extends StatelessWidget {
   const SonathixApp({super.key});
@@ -23,7 +23,17 @@ class SonathixApp extends StatelessWidget {
       ),
       initialRoute: '/',
       onGenerateRoute: (settings) {
-        final path = Uri.parse(settings.name ?? '/').path;
+        final uri = Uri.parse(settings.name ?? '/');
+        final path = uri.path;
+        
+        // ✅ AJOUTER : route /legal
+        if (path == '/legal' || path == '/politique-de-confidentialite' || path == '/conditions-d-utilisation') {
+          LegalMode mode = LegalMode.both;
+          if (uri.queryParameters['mode'] == 'privacy') mode = LegalMode.privacy;
+          if (uri.queryParameters['mode'] == 'terms') mode = LegalMode.terms;
+          return MaterialPageRoute(builder: (_) => LegalScreen(mode: mode));
+        }
+        
         if (path.startsWith('/admin')) {
           return MaterialPageRoute(builder: (_) => const AdminScreen());
         }

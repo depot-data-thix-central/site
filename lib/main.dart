@@ -13,15 +13,29 @@ Future<void> main() async {
     usePathUrlStrategy();
   }
 
-  // Supabase (ne bloque jamais le démarrage)
-  await SupabaseService.init();
+  // ✅ CORRECTIF : Supabase ne doit JAMAIS empêcher le démarrage.
+  // Avant : une exception ici bloquait runApp() → splash infini.
+  try {
+    await SupabaseService.init().timeout(const Duration(seconds: 10));
+  } catch (e, st) {
+    debugPrint('[Main] Supabase init échouée (mode dégradé) : $e');
+    if (kDebugMode) debugPrint('$st');
+  }
+
+  // ✅ CORRECTIF : garantie que le spinner HTML disparaît,
+  // même si le premier frame tarde ou échoue.
+  _removeSplash();
 
   runApp(const SonathixApp());
 
-  // Retire le spinner HTML
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    try {
-      web.document.getElementById('loading')?.remove();
-    } catch (_) {}
+    _removeSplash();
   });
+}
+
+/// Retire le spinner HTML de index.html (idempotent).
+void _removeSplash() {
+  try {
+    web.document.getElementById('loading')?.remove();
+  } catch (_) {}
 }

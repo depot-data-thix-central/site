@@ -73,7 +73,6 @@ class _EditableStat {
   Stat toModel() => Stat(value: value, label: label);
 }
 
-// ✅ NOUVEAU
 class _EditableTeamMember {
   String name, role;
   String? bio;
@@ -84,7 +83,6 @@ class _EditableTeamMember {
   TeamMember toModel() => TeamMember(name: name, role: role, bio: bio, photoUrl: photoUrl);
 }
 
-// ✅ NOUVEAU
 class _EditableGalleryItem {
   String url;
   String? caption;
@@ -107,6 +105,7 @@ enum _AdminTab {
   features('Features', Icons.extension_rounded),
   solutions('Solutions', Icons.lightbulb_outline_rounded),
   stats('Stats', Icons.bar_chart_rounded),
+  legal('Pages légales', Icons.policy_rounded),
   settings('Paramètres', Icons.settings_rounded);
 
   const _AdminTab(this.label, this.icon);
@@ -162,6 +161,7 @@ class _AdminScreenState extends State<AdminScreen> {
     'aboutTitle', 'aboutText',
     'managerName', 'managerMessage',
     'impactQuote', 'visionText', 'consentText', 'footerLegal',
+    'privacyPolicyText', 'termsOfUseText', // ✅ NOUVEAU
   ];
   static const _imageKeys = [
     'seoOgImage', 'heroImageUrl', 'aboutImageUrl', 'visionImageUrl', 'managerPhotoUrl'
@@ -178,7 +178,6 @@ class _AdminScreenState extends State<AdminScreen> {
     }
 
     _log('init');
-    // Vérifier s'il y a déjà une session active au démarrage
     _checkExistingSession();
   }
 
@@ -224,7 +223,6 @@ class _AdminScreenState extends State<AdminScreen> {
         }
       } catch (e) {
         _log('checkExistingSession.error', {'error': '$e'});
-        // En cas d'erreur de vérification, on reste sur l'écran de login
       }
     }
   }
@@ -300,19 +298,6 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   // ── Upload ───────────────────────────────────────────────────
-  //
-  // ✅ CORRECTIF : l'ancienne implémentation utilisait `image_picker`, dont
-  // la variante web (`image_picker_for_web`) crée en interne une URL blob
-  // pour représenter le fichier sélectionné. Sur mobile (Chrome/Safari),
-  // ce package réutilise un unique <input> caché entre les appels, et
-  // l'URL blob se fait révoquer avant que `readAsBytes()` ait fini sa
-  // lecture — d'où l'erreur "Could not load Blob from its URL. Has it
-  // been revoked?". C'est un bug documenté du package sur web mobile.
-  //
-  // La correction recommandée par l'équipe Flutter est de contourner
-  // entièrement ce mécanisme : on crée notre propre <input type="file">
-  // et on lit les octets via FileReader.readAsArrayBuffer(), qui ne
-  // passe jamais par une URL blob révocable.
   Future<String?> _uploadToSupabase(String folder) async {
     _log('upload.start', {'folder': folder});
     try {
@@ -351,9 +336,6 @@ class _AdminScreenState extends State<AdminScreen> {
     }
   }
 
-  /// Ouvre le sélecteur de fichier natif du navigateur et lit les octets
-  /// du fichier choisi directement en mémoire (jamais via une URL blob).
-  /// Retourne `(bytes, nomDuFichier)` ou `null` si l'utilisateur annule.
   Future<(Uint8List, String)?> _pickImageBytesFromBrowser() async {
     final input = web.HTMLInputElement()
       ..type = 'file'
@@ -366,9 +348,6 @@ class _AdminScreenState extends State<AdminScreen> {
         if (!changeCompleter.isCompleted) changeCompleter.complete();
       }.toJS,
     );
-    // Si l'utilisateur ferme la boîte de dialogue sans choisir de fichier,
-    // 'cancel' n'est pas toujours fiable sur tous les navigateurs — on ne
-    // bloque donc pas indéfiniment : voir le timeout plus bas.
     input.click();
     _log('picker.opened');
 
@@ -461,6 +440,10 @@ class _AdminScreenState extends State<AdminScreen> {
       _images['visionImageUrl']?.text = content.visionImageUrl ?? '';
       _text['consentText']?.text = content.consentText;
       _text['footerLegal']?.text = content.footerLegal;
+      
+      // ✅ NOUVEAU : chargement des textes légaux
+      _text['privacyPolicyText']?.text = content.privacyPolicyText;
+      _text['termsOfUseText']?.text = content.termsOfUseText;
 
       _features
         ..clear()
@@ -533,6 +516,8 @@ class _AdminScreenState extends State<AdminScreen> {
         visionImageUrl: _httpsOrNull(_images['visionImageUrl']?.text),
         consentText: _text['consentText']?.text ?? '',
         footerLegal: _text['footerLegal']?.text ?? '',
+        privacyPolicyText: _text['privacyPolicyText']?.text ?? '', // ✅ NOUVEAU
+        termsOfUseText: _text['termsOfUseText']?.text ?? '',       // ✅ NOUVEAU
         version: (_original?.version ?? 0) + 1,
         lastUpdated: DateTime.now(),
       );
@@ -579,7 +564,7 @@ class _AdminScreenState extends State<AdminScreen> {
       setState(() => _publishState = _PublishState.error);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Échec de l’enregistrement.'),
+          content: Text('Échec de l\'enregistrement.'),
           backgroundColor: _A.danger,
         ),
       );
@@ -939,6 +924,8 @@ class _AdminScreenState extends State<AdminScreen> {
         return _solutionsEditor();
       case _AdminTab.stats:
         return _statsEditor();
+      case _AdminTab.legal:      // ✅ NOUVEAU
+        return _legalEditor();
       case _AdminTab.settings:
         return _settings();
     }
@@ -948,7 +935,7 @@ class _AdminScreenState extends State<AdminScreen> {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        const Text('Vue d’ensemble',
+        const Text('Vue d\'ensemble',
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: _A.ink)),
         const SizedBox(height: 16),
         Wrap(
@@ -983,6 +970,15 @@ class _AdminScreenState extends State<AdminScreen> {
                 icon: const Icon(Icons.edit_note_rounded),
                 label: const Text('Éditer le contenu', style: TextStyle(fontWeight: FontWeight.w700)),
               ),
+              FilledButton.tonalIcon(
+                onPressed: () => setState(() => _tab = _AdminTab.legal),
+                style: FilledButton.styleFrom(
+                  backgroundColor: _A.ink.withValues(alpha: 0.08),
+                  foregroundColor: _A.ink,
+                ),
+                icon: const Icon(Icons.policy_rounded),
+                label: const Text('Pages légales', style: TextStyle(fontWeight: FontWeight.w700)),
+              ),
               OutlinedButton.icon(
                 onPressed: _loadContent,
                 style: OutlinedButton.styleFrom(
@@ -999,7 +995,6 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // ── Éditeur de contenu principal ───────────────────────────────
   Widget _contentEditor() {
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -1027,7 +1022,7 @@ class _AdminScreenState extends State<AdminScreen> {
         const SizedBox(height: 28),
 
         _sectionTitle('Impact & Vision'),
-        _field('impactQuote', 'Citation d’impact', maxLines: 3),
+        _field('impactQuote', 'Citation d\'impact', maxLines: 3),
         _field('visionText', 'Texte vision', maxLines: 5),
         _imageUploadField('visionImageUrl', 'Image de la section Vision', 'vision'),
         const SizedBox(height: 28),
@@ -1040,7 +1035,55 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // ── ✅ NOUVEAU : Éditeur "À propos" ──────────────────────────────
+  // ── ✅ NOUVEAU : Éditeur "Pages légales" ─────────────────────────
+  Widget _legalEditor() {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        _sectionTitle('Pages légales du site'),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 24),
+          child: Text(
+            'Ces textes apparaissent sur la page /legal de votre site. Utilisez le format Markdown pour la mise en forme (titres, listes, liens, etc.)',
+            style: TextStyle(color: _A.muted, fontSize: 14),
+          ),
+        ),
+        
+        _card(
+          title: '📋 Politique de confidentialité',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Décrit comment SONATHIX GROUP collecte, utilise et protège les données des utilisateurs.',
+                style: TextStyle(color: _A.muted, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              _field('privacyPolicyText', 'Texte complet', maxLines: 25),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        _card(
+          title: '📜 Conditions d\'utilisation',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Définit les règles et obligations liées à l\'utilisation du site.',
+                style: TextStyle(color: _A.muted, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              _field('termsOfUseText', 'Texte complet', maxLines: 25),
+            ],
+          ),
+        ),
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+
   Widget _aboutEditor() {
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -1054,7 +1097,6 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // ── ✅ NOUVEAU : Éditeur "Équipe" ────────────────────────────────
   Widget _teamEditor() {
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -1123,7 +1165,6 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // ── ✅ NOUVEAU : Éditeur "Galerie" ───────────────────────────────
   Widget _galleryEditor() {
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -1433,7 +1474,7 @@ class _AdminScreenState extends State<AdminScreen> {
             children: [
               Text('• Connexion permanente activée', style: TextStyle(color: _A.muted)),
               SizedBox(height: 6),
-              Text('• URLs d’images restreintes à HTTPS', style: TextStyle(color: _A.muted)),
+              Text('• URLs d\'images restreintes à HTTPS', style: TextStyle(color: _A.muted)),
               SizedBox(height: 6),
               Text('• Aucune donnée sensible loguée en production', style: TextStyle(color: _A.muted)),
             ],
@@ -1456,7 +1497,6 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // ── Helpers UI & Upload Widgets ───────────────────────────────
   Widget _sectionTitle(String t) => Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: Text(t, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: _A.ink)),
@@ -1475,7 +1515,6 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // Uploader pour les images uniques gérées avec des TextEditingControllers
   Widget _imageUploadField(String key, String label, String folder) {
     final ctrl = _images[key];
     final url = ctrl?.text.trim() ?? '';
@@ -1532,7 +1571,7 @@ class _AdminScreenState extends State<AdminScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Image.network(
-                url, // url est ici garanti d'être une String valide
+                url,
                 height: 140,
                 width: double.infinity,
                 fit: BoxFit.cover,
@@ -1549,9 +1588,7 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // Uploader pour les collections (Features, Solutions, Équipe, Galerie)
   Widget _collectionImageUploadField(String label, String? currentUrl, ValueChanged<String> onChanged, String uploadKey, String folder) {
-    // On extrait l'URL en variable non-nullable locale pour éviter l'utilisation de "!"
     final url = currentUrl?.trim() ?? '';
     final ok = url.startsWith('https://');
     final isUploading = _uploading.contains(uploadKey);
@@ -1606,7 +1643,7 @@ class _AdminScreenState extends State<AdminScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Image.network(
-                url, // Grâce à la variable non-nullable locale 'url', pas besoin de '!'
+                url,
                 height: 100,
                 width: 100,
                 fit: BoxFit.cover,

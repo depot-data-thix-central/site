@@ -13,13 +13,10 @@ class _H {
   static const bg = Colors.white;
   static const ink = Color(0xFF0F172A);
   static const muted = Color(0xFF64748B);
-  static const surface = Color(0xFFF8FAFC);
-  static const surfaceAlt = Color(0xFFF1F5F9);
   static const border = Color(0xFFE2E8F0);
   static const subtext = Color(0xFF94A3B8);
   static const lightBorder = Color(0xFFCBD5E1);
   static const accent = Color(0xFF2563EB);
-  static const accentSoft = Color(0xFFEFF6FF);
   static const placeholderBg = Color(0xFFEEF2F7);
 }
 

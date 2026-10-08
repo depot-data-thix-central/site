@@ -9,7 +9,6 @@ class _H {
   static const ink = Color(0xFF0F172A);
   static const muted = Color(0xFF64748B);
   static const surface = Color(0xFFF8FAFC);
-  static const surfaceAlt = Color(0xFFF1F5F9);
   static const border = Color(0xFFE2E8F0);
   static const subtext = Color(0xFF94A3B8);
   static const lightBorder = Color(0xFFCBD5E1);
@@ -58,6 +57,8 @@ class _T {
 // ═══════════════════════════════════════════════════════════════
 // ÉCRAN LÉGAL — Politique de confidentialité + CGU
 // ═══════════════════════════════════════════════════════════════
+enum LegalMode { privacy, terms, both }
+
 class LegalScreen extends StatefulWidget {
   const LegalScreen({super.key, this.mode = LegalMode.both});
   final LegalMode mode;
@@ -65,8 +66,6 @@ class LegalScreen extends StatefulWidget {
   @override
   State<LegalScreen> createState() => _LegalScreenState();
 }
-
-enum LegalMode { privacy, terms, both }
 
 class _LegalScreenState extends State<LegalScreen> {
   final _scroll = ScrollController();
@@ -145,7 +144,7 @@ class _LegalNavbar extends StatelessWidget {
                 Container(
                   width: 36,
                   height: 36,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: _H.ink,
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -237,7 +236,7 @@ class _LegalHero extends StatelessWidget {
                 children: [
                   Container(width: 24, height: 2, color: _H.accent),
                   const SizedBox(width: 12),
-                  Text(
+                  const Text(
                     'Dernière mise à jour : 9 octobre 2026',
                     style: _T.bodySmall,
                   ),
@@ -555,8 +554,8 @@ class _LegalFooter extends StatelessWidget {
               const Text('Technology  •  Innovation  •  Africa',
                   style: TextStyle(color: _H.subtext, fontSize: 12)),
               const SizedBox(height: 20),
-              Text('© 2026 SONATHIX GROUP. Tous droits réservés.',
-                  style: const TextStyle(color: _H.muted, fontSize: 12),
+              const Text('© 2026 SONATHIX GROUP. Tous droits réservés.',
+                  style: TextStyle(color: _H.muted, fontSize: 12),
                   textAlign: TextAlign.center),
             ],
           ),

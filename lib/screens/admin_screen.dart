@@ -1341,14 +1341,15 @@ class _AdminScreenState extends State<AdminScreen> {
         children: [
           const Text('Phare', style: TextStyle(fontSize: 12, color: _A.muted)),
           Switch(
-            value: item.featured,
-            activeThumbColor: _A.ink,
-            onChanged: (v) => setState(() {
-              item.featured = v;
-              _log('solutions.featuredToggle', {'index': i, 'featured': v});
-              _markDirty();
-            }),
-          ),
+  value: item.featured,
+  activeColor: _A.ink,
+  activeTrackColor: _A.ink.withValues(alpha: 0.5),
+  onChanged: (v) => setState(() {
+    item.featured = v;
+    _log('solutions.featuredToggle', {'index': i, 'featured': v});
+    _markDirty();
+  }),
+),
         ],
       ),
       children: [

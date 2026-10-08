@@ -45,6 +45,10 @@ class SiteContent {
   // Consent & Footer
   final String consentText;
   final String footerLegal;
+  
+  // ✅ NOUVEAU : Pages légales
+  final String privacyPolicyText;
+  final String termsOfUseText;
 
   // Admin metadata
   final int version;
@@ -81,6 +85,8 @@ class SiteContent {
     this.managerPhotoUrl,
     this.consentText = '',
     this.footerLegal = '',
+    this.privacyPolicyText = '',  // ✅ NOUVEAU
+    this.termsOfUseText = '',     // ✅ NOUVEAU
     this.version = 1,
     this.lastUpdated,
     this.updatedBy,
@@ -89,11 +95,10 @@ class SiteContent {
   factory SiteContent.empty() => const SiteContent();
   factory SiteContent.demo() => const SiteContent();
 
-    factory SiteContent.fromJson(Map<String, dynamic>? json) {
+  factory SiteContent.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const SiteContent();
 
     try {
-      // 👈 CORRECTION : Extraire la colonne 'data' si elle existe dans la ligne Supabase
       final Map<String, dynamic> contentMap = (json['data'] is Map)
           ? Map<String, dynamic>.from(json['data'] as Map)
           : json;
@@ -107,6 +112,7 @@ class SiteContent {
       final footer = contentMap['footer'] as Map<String, dynamic>? ?? {};
       final consent = contentMap['consent'] as Map<String, dynamic>? ?? {};
       final meta = contentMap['meta'] as Map<String, dynamic>? ?? {};
+      final legal = contentMap['legal'] as Map<String, dynamic>? ?? {}; // ✅ NOUVEAU
 
       return SiteContent(
         seoTitle: _safeString(seo['title'], defaultValue: '', maxLength: 80),
@@ -134,13 +140,17 @@ class SiteContent {
         visionImageUrl: _safeUrl(vision['image_url']),
         visionImageAsset: _safeString(vision['image_asset'], defaultValue: null, maxLength: 200),
         
-        // 👈 Lecture hybride : vérifie la colonne plate en priorité, puis la colonne 'data'
         managerName: _safeString(json['manager_name'] ?? contentMap['manager_name'] ?? manager?['name'], defaultValue: '', maxLength: 100),
         managerMessage: _safeString(json['manager_message'] ?? contentMap['manager_message'] ?? manager?['message'], defaultValue: '', maxLength: 600),
         managerPhotoUrl: _safeUrl(json['manager_photo_url'] ?? contentMap['manager_photo_url'] ?? manager?['photo_url']),
         
         consentText: _safeString(consent['text'], defaultValue: '', maxLength: 600),
         footerLegal: _safeString(footer['legal'], defaultValue: '', maxLength: 1200),
+        
+        // ✅ NOUVEAU : Lecture des textes légaux (colonne plate + data)
+        privacyPolicyText: _safeString(json['privacy_policy_text'] ?? contentMap['privacy_policy_text'] ?? legal['privacyPolicy'] ?? legal['privacy_policy'], defaultValue: '', maxLength: 8000),
+        termsOfUseText: _safeString(json['terms_of_use_text'] ?? contentMap['terms_of_use_text'] ?? legal['termsOfUse'] ?? legal['terms_of_use'], defaultValue: '', maxLength: 8000),
+        
         version: meta['version'] is int ? meta['version'] as int : 1,
         lastUpdated: meta['lastUpdated'] is String ? DateTime.tryParse(meta['lastUpdated'] as String) : null,
         updatedBy: _safeString(meta['updatedBy'], defaultValue: null, maxLength: 100),
@@ -149,7 +159,6 @@ class SiteContent {
       return const SiteContent();
     }
   }
-
 
   Map<String, dynamic> toJson() {
     return {
@@ -190,7 +199,6 @@ class SiteContent {
         'image_asset': visionImageAsset,
       },
       
-      // CORRECTION : Envoi direct aux nom des colonnes plates Supabase
       'manager_name': managerName,
       'manager_message': managerMessage,
       'manager_photo_url': managerPhotoUrl,
@@ -201,6 +209,15 @@ class SiteContent {
       'footer': {
         'legal': footerLegal,
       },
+      
+      // ✅ NOUVEAU : Colonnes plates Supabase + objet legal dans data
+      'privacy_policy_text': privacyPolicyText,
+      'terms_of_use_text': termsOfUseText,
+      'legal': {
+        'privacyPolicy': privacyPolicyText,
+        'termsOfUse': termsOfUseText,
+      },
+      
       'meta': {
         'version': version,
         'lastUpdated': lastUpdated?.toIso8601String(),
@@ -239,6 +256,8 @@ class SiteContent {
     String? managerPhotoUrl,
     String? consentText,
     String? footerLegal,
+    String? privacyPolicyText,  // ✅ NOUVEAU
+    String? termsOfUseText,     // ✅ NOUVEAU
     int? version,
     DateTime? lastUpdated,
     String? updatedBy,
@@ -273,6 +292,8 @@ class SiteContent {
       managerPhotoUrl: managerPhotoUrl ?? this.managerPhotoUrl,
       consentText: consentText ?? this.consentText,
       footerLegal: footerLegal ?? this.footerLegal,
+      privacyPolicyText: privacyPolicyText ?? this.privacyPolicyText,  // ✅ NOUVEAU
+      termsOfUseText: termsOfUseText ?? this.termsOfUseText,           // ✅ NOUVEAU
       version: version ?? this.version,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       updatedBy: updatedBy ?? this.updatedBy,
@@ -305,6 +326,8 @@ class SiteContent {
       managerPhotoUrl: other.managerPhotoUrl ?? managerPhotoUrl,
       consentText: other.consentText.isNotEmpty ? other.consentText : null,
       footerLegal: other.footerLegal.isNotEmpty ? other.footerLegal : null,
+      privacyPolicyText: other.privacyPolicyText.isNotEmpty ? other.privacyPolicyText : null,  // ✅ NOUVEAU
+      termsOfUseText: other.termsOfUseText.isNotEmpty ? other.termsOfUseText : null,           // ✅ NOUVEAU
       features: other.features.isNotEmpty ? other.features : null,
       solutions: other.solutions.isNotEmpty ? other.solutions : null,
       stats: other.stats.isNotEmpty ? other.stats : null,
@@ -449,6 +472,8 @@ class SiteContent {
         managerPhotoUrl == other.managerPhotoUrl &&
         consentText == other.consentText &&
         footerLegal == other.footerLegal &&
+        privacyPolicyText == other.privacyPolicyText &&  // ✅ NOUVEAU
+        termsOfUseText == other.termsOfUseText &&        // ✅ NOUVEAU
         version == other.version;
   }
 
@@ -479,6 +504,8 @@ class SiteContent {
           managerPhotoUrl,
           consentText,
           footerLegal,
+          privacyPolicyText,  // ✅ NOUVEAU
+          termsOfUseText,     // ✅ NOUVEAU
           version,
         ),
       );

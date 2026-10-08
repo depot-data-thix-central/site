@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+  <!-- Placeholder obligatoire pour --base-href -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
+  <!-- CSP compatible Flutter Web + CanvasKit + Supabase -->
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self';
                  script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval';
@@ -34,38 +36,38 @@
   <link rel="manifest" href="manifest.json">
 
   <style>
-    html, body { margin: 0; padding: 0; background: #0A1628; height: 100%; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #0A1628;
+      height: 100%;
+    }
     #loading {
-      position: fixed; inset: 0;
-      display: flex; align-items: center; justify-content: center; flex-direction: column;
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
       font-family: system-ui, -apple-system, sans-serif;
-      color: #C9A227; letter-spacing: 0.25em; font-size: 11px; font-weight: 700;
-      background: #0A1628; z-index: 9999;
+      color: #C9A227;
+      letter-spacing: 0.25em;
+      font-size: 11px;
+      font-weight: 700;
+      background: #0A1628;
+      z-index: 9999;
     }
     .spinner {
-      width: 40px; height: 40px; margin-bottom: 14px;
-      border: 3px solid rgba(201, 162, 39, 0.25); border-top-color: #C9A227;
-      border-radius: 50%; animation: spin 0.9s linear infinite;
+      width: 40px;
+      height: 40px;
+      margin-bottom: 14px;
+      border: 3px solid rgba(201, 162, 39, 0.25);
+      border-top-color: #C9A227;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .error-msg {
-      max-width: 440px; padding: 24px; text-align: center;
-      color: #E5E7EB; letter-spacing: normal; font-size: 14px; font-weight: 500; line-height: 1.6;
-    }
-    .error-msg h2 { color: #C9A227; font-size: 18px; margin: 0 0 12px; letter-spacing: 0.05em; }
-    .error-msg p { margin: 8px 0; opacity: 0.9; }
-    .error-msg code {
-      display: inline-block; background: rgba(201,162,39,0.15); color: #C9A227;
-      padding: 2px 8px; border-radius: 4px; font-family: monospace; font-size: 13px;
-    }
-    .error-msg .diag {
-      margin-top: 14px; padding: 10px; text-align: left;
-      background: rgba(255,255,255,0.06); border-radius: 8px;
-      font-family: monospace; font-size: 12px; color: #94A3B8; word-break: break-word;
-    }
-    .error-msg button {
-      margin-top: 20px; padding: 10px 24px; background: #C9A227; color: #0A1628;
-      border: none; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 13px;
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 </head>
@@ -75,88 +77,10 @@
     <div>SONATHIX GROUP</div>
   </div>
 
-  <noscript>SONATHIX GROUP nécessite JavaScript. Merci de l'activer pour continuer.</noscript>
+  <noscript>
+    SONATHIX GROUP nécessite JavaScript. Merci de l'activer pour continuer.
+  </noscript>
 
-  <!-- ═══ 1) PURGE CACHE + SERVICE WORKER (une seule fois par session) ═══ -->
-  <script>
-    (function () {
-      var KEY = 'sonathix_purge_v1';
-      if (sessionStorage.getItem(KEY)) return; // déjà purgé dans cet onglet
-
-      var done = 0;
-      function step() {
-        if (++done >= 2) {
-          sessionStorage.setItem(KEY, '1');
-          location.reload(); // recharge avec des assets 100% frais
-        }
-      }
-      if (navigator.serviceWorker) {
-        navigator.serviceWorker.getRegistrations()
-          .then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); })
-          .then(step, step);
-      } else { step(); }
-
-      if (window.caches) {
-        caches.keys()
-          .then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })
-          .then(step, step);
-      } else { step(); }
-    })();
-  </script>
-
-  <!-- ═══ 2) SUIVI DES ÉTAPES DE DÉMARRAGE ═══ -->
-  <script>
-    window.__bootStage = 1;   // 1 = page HTML chargée
-    window.__bootErrors = [];
-    window.addEventListener('error', function (e) {
-      try { window.__bootErrors.push(String(e.message || 'erreur inconnue')); } catch (_) {}
-    }, true);
-
-    // ✅ Événement officiel Flutter : premier frame rendu → on retire le splash
-    document.addEventListener('flutter-first-frame', function () {
-      window.__bootStage = 4;
-      if (window.__clearSplashTimeout) window.__clearSplashTimeout();
-      var el = document.getElementById('loading');
-      if (el) el.remove();
-    });
-  </script>
-
-  <!-- ═══ 3) CHARGEMENT FLUTTER avec suivi d'étapes ═══ -->
-  <script src="flutter_bootstrap.js" async
-    onload="window.__bootStage = 2; try { var l = window._flutter && window._flutter.loader; if (l && typeof l.didCreateEngineInitializer === 'function') { var o = l.didCreateEngineInitializer.bind(l); l.didCreateEngineInitializer = function (e) { window.__bootStage = 3; return o(e); }; } } catch (_) {}"
-    onerror="window.__bootStage = -2; window.__bootErrors.push('flutter_bootstrap.js introuvable (404)');"></script>
-
-  <!-- ═══ 4) GARDE-FOU 15s avec DIAGNOSTIC PRÉCIS ═══ -->
-  <script>
-    (function () {
-      var TIMEOUT_MS = 15000;
-      var t = setTimeout(function () {
-        var el = document.getElementById('loading');
-        if (!el) return;
-        if (window.__clearSplashTimeout) window.__clearSplashTimeout();
-
-        var stages = {
-          '-2': 'flutter_bootstrap.js n\'a pas pu être téléchargé (404 / réseau / CSP).',
-          '1': 'La page est chargée mais flutter_bootstrap.js n\'a pas fini de charger (réseau lent, cache corrompu, CSP).',
-          '2': 'bootstrap.js chargé, mais main.dart.js n\'a pas initialisé le moteur (build cassé ou cache périmé).',
-          '3': 'Moteur initialisé, mais le premier frame Flutter n\'est jamais rendu (exception au démarrage de main()).'
-        };
-        var s = window.__bootStage;
-        var errs = (window.__bootErrors || []).slice(-3).join(' | ');
-
-        el.innerHTML =
-          '<div class="error-msg">' +
-          '<h2>Le site ne répond pas</h2>' +
-          '<p>Étape atteinte : <code>' + s + '</code></p>' +
-          '<p>' + (stages[s] || 'Étape inconnue.') + '</p>' +
-          (errs ? '<div class="diag">Erreurs JS : ' + errs + '</div>' : '') +
-          '<p style="margin-top:14px;">Essayez : <code>Ctrl + Maj + R</code> ou navigation privée.</p>' +
-          '<button onclick="sessionStorage.removeItem(\'sonathix_purge_v1\');location.reload(true)">Purger le cache et recharger</button>' +
-          '</div>';
-      }, TIMEOUT_MS);
-
-      window.__clearSplashTimeout = function () { clearTimeout(t); };
-    })();
-  </script>
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

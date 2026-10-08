@@ -146,7 +146,8 @@ class _LegalNavbar extends StatelessWidget {
                   height: 36,
                   decoration: const BoxDecoration(
                     color: _H.ink,
-                    borderRadius: BorderRadius.circular(10),
+                    // ✅ CORRECTION : BorderRadius.all() est const, pas .circular()
+                    borderRadius: BorderRadius.all(Radius.circular(10)),
                   ),
                   alignment: Alignment.center,
                   child: const Text('S',
@@ -227,7 +228,8 @@ class _LegalHero extends StatelessWidget {
                 style: _T.h1(isDesktop),
               ),
               const SizedBox(height: 16),
-              Text(
+              // ✅ CORRECTION : Ajout de const
+              const Text(
                 'Votre vie privée et vos droits comptent. Cette page détaille comment SONATHIX GROUP collecte, utilise et protège vos données, ainsi que les conditions qui régissent l\'utilisation de notre site.',
                 style: _T.body,
               ),

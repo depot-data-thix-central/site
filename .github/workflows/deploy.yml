@@ -1,9 +1,10 @@
-name: Deploy to GitHub Pages
+name: CI & Deploy
 
 on:
+  pull_request:
+    branches: [main]
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches: [main]
 
 permissions:
   contents: read
@@ -11,16 +12,12 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  group: pages
+  cancel-in-progress: true
 
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,8 +25,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.0'
-          channel: 'stable'
+          channel: stable
           cache: true
 
       - name: Install dependencies
@@ -38,28 +34,47 @@ jobs:
       - name: Analyze
         run: flutter analyze --no-fatal-infos
 
+      - name: Test
+        run: flutter test --reporter compact
+        continue-on-error: true   # ne bloque pas le déploiement si pas encore de tests
+
+  deploy:
+    if: github.event_name == 'push'
+    needs: verify
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
       - name: Build Web
         run: |
-          flutter build web --release --wasm \
-            --dart-define=SUPABASE_URL=https://vmqedusamwdgfatgtgck.supabase.co \
-            --dart-define=SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZtcWVkdXNhbXdkZ2ZhdGd0Z2NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MTIzNTYsImV4cCI6MjEwNDk4ODM1Nn0.-olHKoENMJXjjVTSFP0mMJRpjQs6Mt0jZUxqSux_sJI
+          flutter build web \
+            --release \
+            --no-web-resources-cdn \
+            --base-href /site/
 
-      - name: Verify build files
-        run: |
-          echo "=== Files in build/web ==="
-          ls -la build/web/
-          echo "=== Checking critical files ==="
-          test -f build/web/flutter_bootstrap.js && echo "✅ flutter_bootstrap.js OK" || echo "❌ flutter_bootstrap.js MISSING"
-          test -f build/web/main.dart.js && echo "✅ main.dart.js OK" || echo "❌ main.dart.js MISSING"
-          test -f build/web/index.html && echo "✅ index.html OK" || echo "❌ index.html MISSING"
+      - name: Support SPA routes (404 → index.html)
+        run: cp build/web/index.html build/web/404.html
 
-      - name: Setup Pages
+      - name: Configure Pages
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './build/web'
+          path: build/web
 
       - name: Deploy to GitHub Pages
         id: deployment

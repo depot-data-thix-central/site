@@ -39,7 +39,10 @@ jobs:
         run: flutter analyze --no-fatal-infos
 
       - name: Build Web
-        run: flutter build web --release --wasm
+        run: |
+          flutter build web --release --wasm \
+            --dart-define=SUPABASE_URL=https://vmqedusamwdgfatgtgck.supabase.co \
+            --dart-define=SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZtcWVkdXNhbXdkZ2ZhdGd0Z2NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MTIzNTYsImV4cCI6MjEwNDk4ODM1Nn0.-olHKoENMJXjjVTSFP0mMJRpjQs6Mt0jZUxqSux_sJI
 
       - name: Verify build files
         run: |
@@ -47,7 +50,7 @@ jobs:
           ls -la build/web/
           echo "=== Checking critical files ==="
           test -f build/web/flutter_bootstrap.js && echo "✅ flutter_bootstrap.js OK" || echo "❌ flutter_bootstrap.js MISSING"
-          test -f build/web/main.dart.js && echo "✅ main.dart.js OK" || echo " main.dart.js MISSING"
+          test -f build/web/main.dart.js && echo "✅ main.dart.js OK" || echo "❌ main.dart.js MISSING"
           test -f build/web/index.html && echo "✅ index.html OK" || echo "❌ index.html MISSING"
 
       - name: Setup Pages

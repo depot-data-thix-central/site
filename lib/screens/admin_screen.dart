@@ -1342,8 +1342,12 @@ class _AdminScreenState extends State<AdminScreen> {
           const Text('Phare', style: TextStyle(fontSize: 12, color: _A.muted)),
           Switch(
   value: item.featured,
-  activeColor: _A.ink,
-  activeTrackColor: _A.ink.withValues(alpha: 0.5),
+  thumbColor: WidgetStateProperty.all<Color>(_A.ink),
+  trackColor: WidgetStateProperty.resolveWith<Color>(
+    (Set<WidgetState> states) => states.contains(WidgetState.selected)
+        ? _A.ink.withValues(alpha: 0.5)
+        : Colors.grey.withValues(alpha: 0.3),
+  ),
   onChanged: (v) => setState(() {
     item.featured = v;
     _log('solutions.featuredToggle', {'index': i, 'featured': v});
